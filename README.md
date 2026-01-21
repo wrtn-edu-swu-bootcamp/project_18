@@ -108,23 +108,65 @@ S2S는 의류 매장 직원들이 매장 간 재고를 요청하고 관리할 �
 - `completed`: 완료
 - `rejected`: 거절됨
 
+## 🚀 빠른 시작
+
+### 설치 및 실행
+
+```bash
+# 1. 저장소 클론
+git clone https://github.com/wrtn-edu-swu-bootcamp/project_18.git
+cd project_18
+
+# 2. 백엔드 설정 및 실행
+cd backend
+npm install
+npm start          # http://localhost:3001
+
+# 3. 새 터미널에서 프론트엔드 실행
+cd frontend
+npm install
+npm run dev        # http://localhost:5173
+```
+
+브라우저에서 `http://localhost:5173`을 열어 앱을 사용하세요!
+
+### 이메일 설정 (선택사항)
+
+실제 이메일 발송을 테스트하려면:
+
+1. `backend/.env.example`을 `backend/.env`로 복사
+2. Gmail 앱 비밀번호 생성 (https://myaccount.google.com/apppasswords)
+3. `.env` 파일에 이메일 정보 입력
+
+자세한 설정 방법은 [SETUP.md](SETUP.md)를 참조하세요.
+
 ## 📁 프로젝트 구조
 
 ```
 project/
 ├── frontend/          # React 프론트엔드
 │   ├── src/
-│   │   ├── components/   # UI 컴포넌트
-│   │   ├── pages/        # 페이지
-│   │   └── App.jsx
+│   │   ├── pages/        # 페이지 컴포넌트
+│   │   │   ├── Home.jsx
+│   │   │   ├── Chat.jsx
+│   │   │   ├── CurrentInventory.jsx
+│   │   │   ├── Incoming.jsx
+│   │   │   ├── Outgoing.jsx
+│   │   │   └── History.jsx
+│   │   ├── utils/        # API 및 헬퍼 함수
+│   │   ├── App.jsx       # 라우팅
+│   │   └── main.jsx
 │   └── package.json
 ├── backend/           # Node.js 백엔드
-│   ├── server.js
-│   ├── routes/        # API 라우트
-│   └── data/          # JSON 데이터
-├── docs/             # 문서
+│   ├── server.js      # Express 서버
+│   ├── data/
+│   │   ├── stores.json    # 매장 및 재고 데이터
+│   │   └── requests.json  # 재고 요청 데이터
+│   └── package.json
+├── docs/              # 문서
 │   ├── service-plan.md       # 전체 서비스 기획안
 │   └── prototype-plan.md     # 2일 프로토타입 계획
+├── SETUP.md           # 상세 설치 가이드
 └── README.md
 ```
 

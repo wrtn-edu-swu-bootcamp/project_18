@@ -1,0 +1,85 @@
+{
+  "stores": [
+    {
+      "id": "store-1",
+      "name": "강남점",
+      "email": "gangnam@s2s-store.com",
+      "inventory": [
+        {
+          "id": "item-1",
+          "name": "청바지",
+          "size": "28인치",
+          "quantity": 15
+        },
+        {
+          "id": "item-2",
+          "name": "청바지",
+          "size": "30인치",
+          "quantity": 12
+        },
+        {
+          "id": "item-3",
+          "name": "티셔츠",
+          "size": "M",
+          "quantity": 20
+        },
+        {
+          "id": "item-4",
+          "name": "청바지",
+          "size": "32인치",
+          "quantity": 8
+        }
+      ]
+    },
+    {
+      "id": "store-2",
+      "name": "신촌점",
+      "email": "sinchon@s2s-store.com",
+      "inventory": [
+        {
+          "id": "item-5",
+          "name": "청바지",
+          "size": "32인치",
+          "quantity": 10
+        },
+        {
+          "id": "item-6",
+          "name": "티셔츠",
+          "size": "L",
+          "quantity": 18
+        },
+        {
+          "id": "item-7",
+          "name": "재킷",
+          "size": "M",
+          "quantity": 5
+        }
+      ]
+    },
+    {
+      "id": "store-3",
+      "name": "홍대점",
+      "email": "hongdae@s2s-store.com",
+      "inventory": [
+        {
+          "id": "item-8",
+          "name": "청바지",
+          "size": "32인치",
+          "quantity": 7
+        },
+        {
+          "id": "item-9",
+          "name": "티셔츠",
+          "size": "S",
+          "quantity": 25
+        },
+        {
+          "id": "item-10",
+          "name": "셔츠",
+          "size": "L",
+          "quantity": 10
+        }
+      ]
+    }
+  ]
+}
