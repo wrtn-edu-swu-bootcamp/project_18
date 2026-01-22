@@ -37,16 +37,16 @@ export default function CurrentInventory() {
     async function initializeStore() {
       console.log('📦 CurrentInventory 초기화 시작');
       
-      const storedMyName = localStorage.getItem('myStore');
-      const storedCurrentName = localStorage.getItem('currentStore');
+      const storedMyId = localStorage.getItem('myStore');
+      const storedCurrentId = localStorage.getItem('currentStore');
       
       console.log('📦 localStorage 내용:', { 
-        myStore: storedMyName, 
-        currentStore: storedCurrentName,
+        myStore: storedMyId, 
+        currentStore: storedCurrentId,
         전체내용: { ...localStorage }
       });
       
-      if (!storedMyName) {
+      if (!storedMyId) {
         console.log('❌ myStore가 localStorage에 없습니다!');
         alert('로그인 정보가 없습니다. 다시 로그인해주세요.');
         navigate('/');
@@ -57,12 +57,12 @@ export default function CurrentInventory() {
         const stores = await getStores();
         console.log('📦 백엔드에서 가져온 매장:', stores);
         
-        const myStoreData = stores.find(s => s.name === storedMyName);
+        const myStoreData = stores.find(s => s.id === storedMyId);
         
         if (!myStoreData) {
-          console.log('❌ myStore를 찾을 수 없습니다:', storedMyName);
-          console.log('❌ 사용 가능한 매장:', stores.map(s => s.name));
-          alert(`매장 "${storedMyName}"을 찾을 수 없습니다. 다시 로그인해주세요.`);
+          console.log('❌ myStore를 찾을 수 없습니다:', storedMyId);
+          console.log('❌ 사용 가능한 매장:', stores.map(s => s.id));
+          alert(`매장 "${storedMyId}"을 찾을 수 없습니다. 다시 로그인해주세요.`);
           navigate('/');
           return;
         }
@@ -71,8 +71,8 @@ export default function CurrentInventory() {
         setMyStore(myStoreData);
         
         // Home에서 선택한 매장이 있으면 그 매장을, 없으면 내 매장을 표시
-        if (storedCurrentName) {
-          const currentStoreData = stores.find(s => s.name === storedCurrentName) || myStoreData;
+        if (storedCurrentId) {
+          const currentStoreData = stores.find(s => s.id === storedCurrentId) || myStoreData;
           console.log('✅ currentStore 설정:', currentStoreData);
           setCurrentStore(currentStoreData);
           await loadInventory(currentStoreData.id);
@@ -179,6 +179,64 @@ export default function CurrentInventory() {
   const filteredInventory = categoryFilter === 'all' 
     ? inventory 
     : inventory.filter(item => item.category === categoryFilter);
+
+  // 전체 인벤토리 그룹화 (카테고리 필터 개수 계산용)
+  const allGroupedInventory = inventory.reduce((groups, item) => {
+    const productId = item.id || `${item.category}_${item.color}`;
+    if (!groups[productId]) {
+      groups[productId] = { productId, category: item.category };
+    }
+    return groups;
+  }, {});
+
+  // 같은 제품(CATEGORY_COLOR)을 그룹화
+  const groupedInventory = filteredInventory.reduce((groups, item) => {
+    const productId = item.id || `${item.category}_${item.color}`;
+    if (!groups[productId]) {
+      groups[productId] = {
+        productId,
+        category: item.category,
+        color: item.color,
+        name: item.name,
+        sizeMap: {} // 사이즈별로 합산하기 위한 맵
+      };
+    }
+    
+    // 같은 사이즈면 합산
+    const size = item.size;
+    if (!groups[productId].sizeMap[size]) {
+      groups[productId].sizeMap[size] = {
+        size: size,
+        stockQuantity: 0,
+        displayQuantity: 0,
+        originalItems: []
+      };
+    }
+    groups[productId].sizeMap[size].stockQuantity += (item.stockQuantity || 0);
+    groups[productId].sizeMap[size].displayQuantity += (item.displayQuantity || 0);
+    groups[productId].sizeMap[size].originalItems.push(item);
+    
+    return groups;
+  }, {});
+
+  // 사이즈 정렬 순서
+  const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '26', '27', '28', '29', 'FREE'];
+  
+  // 각 그룹 내 사이즈 정렬 및 배열로 변환
+  Object.values(groupedInventory).forEach(group => {
+    group.sizes = Object.values(group.sizeMap).sort((a, b) => {
+      const aIndex = sizeOrder.indexOf(a.size);
+      const bIndex = sizeOrder.indexOf(b.size);
+      return aIndex - bIndex;
+    });
+    delete group.sizeMap; // 더 이상 필요 없음
+    
+    // 총 수량 계산
+    group.totalStock = group.sizes.reduce((sum, s) => sum + s.stockQuantity, 0);
+    group.totalDisplay = group.sizes.reduce((sum, s) => sum + s.displayQuantity, 0);
+  });
+
+  const groupedList = Object.values(groupedInventory);
 
   const isMyStore = currentStore?.id === myStore?.id;
 
@@ -487,83 +545,105 @@ export default function CurrentInventory() {
                 fontSize: '0.875rem'
               }}
             >
-              전체 ({inventory.length})
+              전체 ({Object.keys(allGroupedInventory).length}종)
             </button>
-            {CATEGORIES.map(category => (
-              <button
-                key={category}
-                onClick={() => setCategoryFilter(category)}
-                style={{
-                  padding: '0.5rem 1rem',
-                  borderRadius: '0.5rem',
-                  border: 'none',
-                  backgroundColor: categoryFilter === category ? '#3b82f6' : '#f3f4f6',
-                  color: categoryFilter === category ? 'white' : '#374151',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem'
-                }}
-              >
-                {category} ({inventory.filter(i => i.category === category).length})
-              </button>
-            ))}
+            {CATEGORIES.map(category => {
+              const categoryGroups = Object.values(allGroupedInventory).filter(g => g.category === category);
+              return (
+                <button
+                  key={category}
+                  onClick={() => setCategoryFilter(category)}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    borderRadius: '0.5rem',
+                    border: 'none',
+                    backgroundColor: categoryFilter === category ? '#3b82f6' : '#f3f4f6',
+                    color: categoryFilter === category ? 'white' : '#374151',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem'
+                  }}
+                >
+                  {category} ({categoryGroups.length})
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* 재고 목록 */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-          {filteredInventory.length === 0 ? (
+        {/* 재고 목록 (그룹화) */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem' }}>
+          {groupedList.length === 0 ? (
             <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', color: '#6b7280' }}>
               {categoryFilter === 'all' ? '재고가 없습니다.' : `${categoryFilter} 카테고리에 재고가 없습니다.`}
             </div>
           ) : (
-            filteredInventory.map((item) => (
-              <div key={item.id} style={{ backgroundColor: 'white', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', padding: '1.5rem' }}>
+            groupedList.map((group) => (
+              <div key={group.productId} style={{ backgroundColor: 'white', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', padding: '1.5rem' }}>
                 <div style={{ marginBottom: '1rem' }}>
                   <div style={{ display: 'inline-block', backgroundColor: '#eff6ff', color: '#1e40af', padding: '0.25rem 0.75rem', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: '600', marginBottom: '0.5rem' }}>
-                    {item.category}
+                    {group.category}
                   </div>
                   <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', fontFamily: 'monospace' }}>
-                    {item.id || `${item.name}_${item.color}`}
+                    {group.productId}
                   </h3>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>사이즈: {item.size}</p>
                 </div>
                 
-                <div style={{ marginBottom: '1rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>창고 수량</span>
+                {/* 총 수량 요약 */}
+                <div style={{ marginBottom: '1rem', padding: '0.75rem', backgroundColor: '#f9fafb', borderRadius: '0.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                    <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>총 창고</span>
                     <span style={{ 
-                      fontSize: '1.25rem', 
+                      fontSize: '1.125rem', 
                       fontWeight: 'bold',
-                      color: item.stockQuantity > 10 ? '#10b981' : item.stockQuantity > 5 ? '#f59e0b' : '#ef4444'
+                      color: group.totalStock > 10 ? '#10b981' : group.totalStock > 5 ? '#f59e0b' : '#ef4444'
                     }}>
-                      {item.stockQuantity}개
+                      {group.totalStock}개
                     </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>진열 수량</span>
+                    <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>총 진열</span>
                     <span style={{ fontSize: '1rem', fontWeight: '600', color: '#3b82f6' }}>
-                      {item.displayQuantity || 0}개
+                      {group.totalDisplay}개
                     </span>
                   </div>
                 </div>
-                
-                <button
-                  onClick={() => handleEditClick(item)}
-                  style={{
-                    width: '100%',
-                    backgroundColor: '#3b82f6',
-                    color: 'white',
-                    padding: '0.5rem',
-                    borderRadius: '0.5rem',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontWeight: '500',
-                    fontSize: '0.875rem'
-                  }}
-                >
-                  ✏️ 수량 수정
-                </button>
+
+                {/* 사이즈별 수량 */}
+                <div style={{ marginBottom: '1rem' }}>
+                  <p style={{ fontSize: '0.75rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>사이즈별 수량</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {group.sizes.map((sizeInfo) => (
+                      <div 
+                        key={sizeInfo.size} 
+                        onClick={() => {
+                          // 합산된 경우 첫 번째 아이템 수정
+                          if (sizeInfo.originalItems && sizeInfo.originalItems.length > 0) {
+                            handleEditClick(sizeInfo.originalItems[0]);
+                          }
+                        }}
+                        style={{ 
+                          padding: '0.5rem 0.75rem', 
+                          backgroundColor: sizeInfo.stockQuantity > 0 ? '#ecfdf5' : '#fef2f2',
+                          border: `1px solid ${sizeInfo.stockQuantity > 0 ? '#10b981' : '#ef4444'}`,
+                          borderRadius: '0.375rem',
+                          cursor: 'pointer',
+                          transition: '0.2s'
+                        }}
+                        onMouseOver={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; }}
+                        onMouseOut={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+                      >
+                        <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#374151' }}>{sizeInfo.size}</div>
+                        <div style={{ fontSize: '0.875rem', fontWeight: 'bold', color: sizeInfo.stockQuantity > 0 ? '#10b981' : '#ef4444' }}>
+                          {sizeInfo.stockQuantity + sizeInfo.displayQuantity}
+                        </div>
+                        <div style={{ fontSize: '0.625rem', color: '#6b7280' }}>
+                          창고{sizeInfo.stockQuantity} / 진열{sizeInfo.displayQuantity}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             ))
           )}

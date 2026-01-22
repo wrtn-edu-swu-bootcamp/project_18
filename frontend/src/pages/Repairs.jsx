@@ -7,6 +7,7 @@ const API_BASE = 'http://localhost:3001/api';
 export default function Repairs() {
   const [repairs, setRepairs] = useState([]);
   const [currentStore, setCurrentStore] = useState(null);
+  const [inventory, setInventory] = useState([]);
   const [adminName, setAdminName] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [statusFilter, setStatusFilter] = useState('수선 전');
@@ -28,16 +29,16 @@ export default function Repairs() {
 
   useEffect(() => {
     async function initializeRepairs() {
-      const storedName = localStorage.getItem('myStore');
+      const storedId = localStorage.getItem('myStore');
       const storedAdminName = localStorage.getItem('adminName');
-      if (!storedName) {
+      if (!storedId) {
         navigate('/');
         return;
       }
       
       try {
         const stores = await getStores();
-        const store = stores.find(s => s.name === storedName);
+        const store = stores.find(s => s.id === storedId);
         
         if (!store) {
           navigate('/');
@@ -45,6 +46,7 @@ export default function Repairs() {
         }
         
         setCurrentStore(store);
+        setInventory(store.inventory || []);
         setAdminName(storedAdminName || 'admin1');
         loadRepairs(store.id);
         
@@ -276,30 +278,38 @@ export default function Repairs() {
           <div style={{ backgroundColor: 'white', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', padding: '1.5rem', marginBottom: '1.5rem' }}>
             <h2 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1rem' }}>수선 등록</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
-              <input
-                type="text"
-                placeholder="관리자 (예: 김*수)"
-                value={newRepair.managerName}
+              <select
+                value={newRepair.managerName || adminName}
                 onChange={(e) => setNewRepair({...newRepair, managerName: e.target.value})}
-                style={{ padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.5rem' }}
-              />
+                style={{ padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', cursor: 'pointer' }}
+              >
+                <option value="admin1">admin1</option>
+                <option value="admin2">admin2</option>
+                <option value="admin3">admin3</option>
+                <option value="admin4">admin4</option>
+              </select>
               <input
                 type="text"
-                placeholder="고객명 (예: 이*민) *"
+                placeholder="고객명 (예: 이*민)"
                 value={newRepair.customerName}
                 onChange={(e) => setNewRepair({...newRepair, customerName: e.target.value})}
                 style={{ padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.5rem' }}
               />
-              <input
-                type="text"
-                placeholder="제품명 (예: OUTERWEAR_BROWN) *"
+              <select
                 value={newRepair.productId}
                 onChange={(e) => setNewRepair({...newRepair, productId: e.target.value})}
-                style={{ padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.5rem' }}
-              />
+                style={{ padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', cursor: 'pointer' }}
+              >
+                <option value="">제품 선택</option>
+                {inventory.map((item, index) => (
+                  <option key={index} value={`${item.category}_${item.color}`}>
+                    {item.category}_{item.color} (재고: {item.stockQuantity}개)
+                  </option>
+                ))}
+              </select>
               <input
                 type="text"
-                placeholder="수선 내용 (예: 소매 수선) *"
+                placeholder="수선 내용 (예: 소매 수선)"
                 value={newRepair.repairContent}
                 onChange={(e) => setNewRepair({...newRepair, repairContent: e.target.value})}
                 style={{ padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.5rem' }}
@@ -314,7 +324,7 @@ export default function Repairs() {
               <select
                 value={newRepair.paymentStatus}
                 onChange={(e) => setNewRepair({...newRepair, paymentStatus: e.target.value})}
-                style={{ padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.5rem' }}
+                style={{ padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', cursor: 'pointer' }}
               >
                 <option value="미불">미불</option>
                 <option value="완불">완불</option>

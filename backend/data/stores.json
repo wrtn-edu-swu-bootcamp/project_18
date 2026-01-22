@@ -21,8 +21,8 @@
           "name": "KNITWEAR",
           "color": "BLUE",
           "size": "L",
-          "stockQuantity": 8,
-          "displayQuantity": 3,
+          "stockQuantity": 5,
+          "displayQuantity": 1,
           "quantity": 5
         },
         {
@@ -34,6 +34,42 @@
           "stockQuantity": 15,
           "displayQuantity": 5,
           "quantity": 4
+        },
+        {
+          "id": "OUTERWEAR_BROWN",
+          "category": "OUTERWEAR",
+          "name": "OUTERWEAR",
+          "color": "BROWN",
+          "size": "M",
+          "stockQuantity": 3,
+          "displayQuantity": 3
+        },
+        {
+          "id": "OUTERWEAR_BROWN",
+          "category": "OUTERWEAR",
+          "name": "OUTERWEAR",
+          "color": "BROWN",
+          "size": "S",
+          "stockQuantity": 3,
+          "displayQuantity": 2
+        },
+        {
+          "id": "OUTERWEAR_BROWN",
+          "category": "OUTERWEAR",
+          "name": "OUTERWEAR",
+          "color": "BROWN",
+          "size": "L",
+          "stockQuantity": 4,
+          "displayQuantity": 2
+        },
+        {
+          "id": "OUTERWEAR_BLACK",
+          "category": "OUTERWEAR",
+          "name": "OUTERWEAR",
+          "color": "BLACK",
+          "size": "XL",
+          "stockQuantity": 1,
+          "displayQuantity": 1
         }
       ]
     },
@@ -49,7 +85,7 @@
           "color": "BLACK",
           "size": "L",
           "stockQuantity": 8,
-          "displayQuantity": 4
+          "displayQuantity": 1
         },
         {
           "id": "BLOUSE_PINK",
@@ -59,6 +95,33 @@
           "size": "S",
           "stockQuantity": 7,
           "displayQuantity": 2
+        },
+        {
+          "id": "KNITWEAR_BLUE",
+          "category": "KNITWEAR",
+          "name": "KNITWEAR",
+          "color": "BLUE",
+          "size": "L",
+          "stockQuantity": 1,
+          "displayQuantity": 0
+        },
+        {
+          "id": "ACC_SILVER",
+          "category": "ACC",
+          "name": "ACC",
+          "color": "SILVER",
+          "size": "FREE",
+          "stockQuantity": 5,
+          "displayQuantity": 5
+        },
+        {
+          "id": "OUTERWEAR_BLUE",
+          "category": "OUTERWEAR",
+          "name": "OUTERWEAR",
+          "color": "BLUE",
+          "size": "M",
+          "stockQuantity": 5,
+          "displayQuantity": 4
         }
       ]
     },
@@ -73,8 +136,8 @@
           "name": "DRESS&SKIRT",
           "color": "RED",
           "size": "M",
-          "stockQuantity": 6,
-          "displayQuantity": 2
+          "stockQuantity": 2,
+          "displayQuantity": 0
         },
         {
           "id": "T-SHIRT_BLACK",
@@ -84,6 +147,24 @@
           "size": "XL",
           "stockQuantity": 20,
           "displayQuantity": 8
+        },
+        {
+          "id": "T-SHIRT_WHITE",
+          "category": "T-SHIRT",
+          "name": "T-SHIRT",
+          "color": "WHITE",
+          "size": "M",
+          "stockQuantity": 10,
+          "displayQuantity": 0
+        },
+        {
+          "id": "DRESS&SKIRT_BLUE",
+          "category": "DRESS&SKIRT",
+          "name": "DRESS&SKIRT",
+          "color": "BLUE",
+          "size": "S",
+          "stockQuantity": 10,
+          "displayQuantity": 0
         }
       ]
     },
@@ -111,6 +192,69 @@
           "stockQuantity": 3,
           "displayQuantity": 0,
           "quantity": 1
+        },
+        {
+          "id": "PANTS_BROWN",
+          "category": "PANTS",
+          "name": "PANTS",
+          "color": "BROWN",
+          "size": "27",
+          "stockQuantity": 5,
+          "displayQuantity": 0
+        },
+        {
+          "id": "PANTS_BEIGE",
+          "category": "PANTS",
+          "name": "PANTS",
+          "color": "BEIGE",
+          "size": "28",
+          "stockQuantity": 2,
+          "displayQuantity": 3
+        },
+        {
+          "id": "ACC_GOLD",
+          "category": "ACC",
+          "name": "ACC",
+          "color": "GOLD",
+          "size": "FREE",
+          "stockQuantity": 6,
+          "displayQuantity": 3
+        },
+        {
+          "id": "BLOUSE_PINK",
+          "category": "BLOUSE",
+          "name": "BLOUSE",
+          "color": "PINK",
+          "size": "M",
+          "stockQuantity": 4,
+          "displayQuantity": 4
+        },
+        {
+          "id": "PANTS_BEIGE",
+          "category": "PANTS",
+          "name": "PANTS",
+          "color": "BEIGE",
+          "size": "26",
+          "stockQuantity": 4,
+          "displayQuantity": 3
+        },
+        {
+          "id": "PANTS_BEIGE",
+          "category": "PANTS",
+          "name": "PANTS",
+          "color": "BEIGE",
+          "size": "27",
+          "stockQuantity": 5,
+          "displayQuantity": 4
+        },
+        {
+          "id": "PANTS_BEIGE",
+          "category": "PANTS",
+          "name": "PANTS",
+          "color": "BEIGE",
+          "size": "29",
+          "stockQuantity": 4,
+          "displayQuantity": 3
         }
       ]
     },
@@ -127,6 +271,96 @@
           "size": "L",
           "stockQuantity": 9,
           "displayQuantity": 3
+        },
+        {
+          "id": "OUTERWEAR_GRAY",
+          "category": "OUTERWEAR",
+          "name": "OUTERWEAR",
+          "color": "GRAY",
+          "size": "M",
+          "stockQuantity": 3,
+          "displayQuantity": 3
+        },
+        {
+          "id": "BLOUSE_BLUE",
+          "category": "BLOUSE",
+          "name": "BLOUSE",
+          "color": "BLUE",
+          "size": "XS",
+          "stockQuantity": 5,
+          "displayQuantity": 3
+        },
+        {
+          "id": "DRESS&SKIRT_WHITE",
+          "category": "DRESS&SKIRT",
+          "name": "DRESS&SKIRT",
+          "color": "WHITE",
+          "size": "M",
+          "stockQuantity": 4,
+          "displayQuantity": 2
+        },
+        {
+          "id": "DRESS&SKIRT_GREEN",
+          "category": "DRESS&SKIRT",
+          "name": "DRESS&SKIRT",
+          "color": "GREEN",
+          "size": "M",
+          "stockQuantity": 3,
+          "displayQuantity": 4
+        },
+        {
+          "id": "DRESS&SKIRT_WHITE",
+          "category": "DRESS&SKIRT",
+          "name": "DRESS&SKIRT",
+          "color": "WHITE",
+          "size": "XL",
+          "stockQuantity": 3,
+          "displayQuantity": 4
+        },
+        {
+          "id": "DRESS&SKIRT_WHITE",
+          "category": "DRESS&SKIRT",
+          "name": "DRESS&SKIRT",
+          "color": "WHITE",
+          "size": "XS",
+          "stockQuantity": 5,
+          "displayQuantity": 3
+        },
+        {
+          "id": "DRESS&SKIRT_GREEN",
+          "category": "DRESS&SKIRT",
+          "name": "DRESS&SKIRT",
+          "color": "GREEN",
+          "size": "S",
+          "stockQuantity": 4,
+          "displayQuantity": 2
+        },
+        {
+          "id": "OUTERWEAR_NAVY",
+          "category": "OUTERWEAR",
+          "name": "OUTERWEAR",
+          "color": "NAVY",
+          "size": "XL",
+          "stockQuantity": 3,
+          "displayQuantity": 2
+        },
+        {
+          "id": "DRESS&SKIRT_RED",
+          "category": "DRESS&SKIRT",
+          "name": "DRESS&SKIRT",
+          "color": "RED",
+          "size": "M",
+          "stockQuantity": 3,
+          "displayQuantity": 0
+        },
+        {
+          "id": "PANTS_BEIGE",
+          "category": "PANTS",
+          "name": "PANTS",
+          "color": "BEIGE",
+          "size": "29",
+          "stockQuantity": 5,
+          "displayQuantity": 5
         }
       ]
     },
@@ -150,8 +384,8 @@
           "name": "DRESS&SKIRT",
           "color": "BLUE",
           "size": "S",
-          "stockQuantity": 8,
-          "displayQuantity": 3
+          "stockQuantity": 1,
+          "displayQuantity": 2
         },
         {
           "id": "T-SHIRT_BLUE",
@@ -177,8 +411,53 @@
           "name": "PANTS",
           "color": "BROWN",
           "size": "27",
-          "stockQuantity": 3,
+          "stockQuantity": 0,
+          "displayQuantity": 1
+        },
+        {
+          "id": "DRESS&SKIRT_BLUE",
+          "category": "DRESS&SKIRT",
+          "name": "DRESS&SKIRT",
+          "color": "BLUE",
+          "size": "S",
+          "stockQuantity": 4,
+          "displayQuantity": 8
+        },
+        {
+          "id": "BLOUSE_PINK",
+          "category": "BLOUSE",
+          "name": "BLOUSE",
+          "color": "PINK",
+          "size": "M",
+          "stockQuantity": 4,
+          "displayQuantity": 4
+        },
+        {
+          "id": "PANTS_BROWN",
+          "category": "PANTS",
+          "name": "PANTS",
+          "color": "BROWN",
+          "size": "27",
+          "stockQuantity": 7,
+          "displayQuantity": 4
+        },
+        {
+          "id": "PANTS_BROWN",
+          "category": "PANTS",
+          "name": "PANTS",
+          "color": "BROWN",
+          "size": "28",
+          "stockQuantity": 6,
           "displayQuantity": 3
+        },
+        {
+          "id": "PANTS_BLACK",
+          "category": "PANTS",
+          "name": "PANTS",
+          "color": "BLACK",
+          "size": "28",
+          "stockQuantity": 3,
+          "displayQuantity": 4
         }
       ]
     }

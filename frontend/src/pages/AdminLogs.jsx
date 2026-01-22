@@ -17,15 +17,15 @@ export default function AdminLogs() {
 
   useEffect(() => {
     async function initializeLogs() {
-      const storedName = localStorage.getItem('myStore');
-      if (!storedName) {
+      const storedId = localStorage.getItem('myStore');
+      if (!storedId) {
         navigate('/');
         return;
       }
       
       try {
         const stores = await getStores();
-        const store = stores.find(s => s.name === storedName);
+        const store = stores.find(s => s.id === storedId);
         
         if (!store) {
           navigate('/');

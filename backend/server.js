@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import fs from 'fs/promises';
@@ -31,23 +32,33 @@ async function writeJSON(filePath, data) {
 }
 
 // 이메일 설정 (Gmail 사용)
-// 사용하려면 Gmail 앱 비밀번호가 필요합니다
 let transporter = null;
 
-// nodemailer 동적 import
+// nodemailer 설정
 async function setupEmailService() {
   try {
     const nodemailer = await import('nodemailer');
-    transporter = nodemailer.default.createTransporter({
+    
+    console.log('📧 이메일 서비스 설정 중...');
+    console.log(`   📨 발송 계정: ${process.env.EMAIL_USER}`);
+    
+    transporter = nodemailer.default.createTransport({
       service: 'gmail',
       auth: {
-        user: process.env.EMAIL_USER || 'your-email@gmail.com',
-        pass: process.env.EMAIL_PASS || 'your-app-password'
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      },
+      tls: {
+        rejectUnauthorized: false
       }
     });
-    console.log('📧 Email service configured');
+    
+    // 연결 테스트
+    await transporter.verify();
+    console.log('✅ 이메일 서비스 연결 성공!');
   } catch (error) {
-    console.log('⚠️  Email service not available (nodemailer not installed)');
+    console.error('❌ 이메일 서비스 설정 실패:', error.message);
+    transporter = null;
   }
 }
 
@@ -199,6 +210,72 @@ app.post('/api/inventory/search', async (req, res) => {
   }
 });
 
+// 재고 요청 이메일 발송 (InventoryRequest 페이지용)
+app.post('/api/send-request-email', async (req, res) => {
+  try {
+    const { to, subject, content, fromStore, toStore, item, quantity, includeDisplay, specialNote, adminName, adminEmail } = req.body;
+    
+    console.log('📧 재고 요청 이메일 발송 API 호출');
+    console.log('   발신: ' + fromStore);
+    console.log('   수신: ' + toStore);
+    console.log('   제품: ' + item);
+    
+    // 요청 저장
+    const requestsData = await readJSON(REQUESTS_FILE);
+    const storesData = await readJSON(STORES_FILE);
+    
+    const fromStoreObj = storesData.stores.find(s => s.id === fromStore);
+    const toStoreObj = storesData.stores.find(s => s.id === toStore);
+    
+    if (!fromStoreObj || !toStoreObj) {
+      return res.status(404).json({ error: '매장을 찾을 수 없습니다.' });
+    }
+    
+    const newRequest = {
+      id: `req-${Date.now()}`,
+      fromStoreId: fromStoreObj.id,
+      fromStoreName: fromStoreObj.name,
+      toStoreId: toStoreObj.id,
+      toStoreName: toStoreObj.name,
+      toStoreEmail: toStoreObj.email,
+      item: item,
+      quantity: quantity,
+      includeDisplay: includeDisplay,
+      specialNote: specialNote,
+      requesterName: adminName,
+      adminName: adminName,
+      adminEmail: adminEmail || '',
+      status: 'requested',
+      createdAt: new Date().toISOString()
+    };
+    
+    requestsData.requests.push(newRequest);
+    await writeJSON(REQUESTS_FILE, requestsData);
+    
+    // 실제 이메일 발송
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📧 이메일 발송 시도');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`📨 수신: ${to}`);
+    console.log(`📋 제목: ${subject}`);
+    
+    const emailResult = await sendEmail(to, subject, content.replace(/\n/g, '<br>'));
+    
+    if (emailResult.success) {
+      console.log('✅ 이메일 발송 성공!');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      res.json({ success: true, message: '재고 요청 이메일이 발송되었습니다.', requestId: newRequest.id });
+    } else {
+      console.log('⚠️ 이메일 발송 실패 (요청은 저장됨):', emailResult.error);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      res.json({ success: true, message: '재고 요청이 저장되었습니다. (이메일 발송 실패)', requestId: newRequest.id, emailError: emailResult.error });
+    }
+  } catch (error) {
+    console.error('재고 요청 처리 중 오류:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // 재고 요청 생성
 app.post('/api/requests', async (req, res) => {
   try {
@@ -270,27 +347,27 @@ app.get('/api/requests', async (req, res) => {
   }
 });
 
-// 특정 매장의 대기 중 재고 (입고 대기 - 내가 요청한 것)
+// 특정 매장의 입고 대기 (내가 다른 매장에 요청한 것)
 app.get('/api/requests/incoming/:storeId', async (req, res) => {
   try {
     const data = await readJSON(REQUESTS_FILE);
-    // toStoreId가 나인 경우 = 나에게 오는 재고
-    const incoming = data.requests.filter(r => r.toStoreId === req.params.storeId);
+    // fromStoreId가 나인 경우 = 내가 다른 매장에 요청한 재고 (입고 예정)
+    const incoming = data.requests.filter(r => r.fromStoreId === req.params.storeId);
     res.json(incoming);
   } catch (error) {
-    res.status(500).json({ error: '대기 중 재고를 불러오는데 실패했습니다.' });
+    res.status(500).json({ error: '입고 대기 재고를 불러오는데 실패했습니다.' });
   }
 });
 
-// 특정 매장의 준비 중 재고 (출고 대기 - 나에게 요청온 것)
+// 특정 매장의 출고 대기 (다른 매장이 나에게 요청한 것)
 app.get('/api/requests/outgoing/:storeId', async (req, res) => {
   try {
     const data = await readJSON(REQUESTS_FILE);
-    // fromStoreId가 나인 경우 = 나에게서 가는 재고
-    const outgoing = data.requests.filter(r => r.fromStoreId === req.params.storeId);
+    // toStoreId가 나인 경우 = 다른 매장이 나에게 요청한 재고 (출고해줘야 함)
+    const outgoing = data.requests.filter(r => r.toStoreId === req.params.storeId);
     res.json(outgoing);
   } catch (error) {
-    res.status(500).json({ error: '준비 중 재고를 불러오는데 실패했습니다.' });
+    res.status(500).json({ error: '출고 대기 재고를 불러오는데 실패했습니다.' });
   }
 });
 
@@ -308,10 +385,10 @@ app.patch('/api/requests/:id', async (req, res) => {
     request.status = req.body.status;
     request.updatedAt = new Date().toISOString();
     
-    // 상태가 'in_transit'(배송중)로 변경되면 출고 매장(fromStoreId)의 재고 차감
+    // 상태가 'in_transit'(배송중)로 변경되면 출고 매장(toStoreId = 재고 보유 매장)의 재고 차감
     if (req.body.status === 'in_transit' && oldStatus !== 'in_transit') {
       const storesData = await readJSON(STORES_FILE);
-      const store = storesData.stores.find(s => s.id === request.fromStoreId);
+      const store = storesData.stores.find(s => s.id === request.toStoreId);
       
       if (store) {
         // 재고 아이템 찾기 (item 이름으로 검색)
@@ -345,10 +422,10 @@ app.patch('/api/requests/:id', async (req, res) => {
       }
     }
     
-    // 상태가 'completed'(완료)로 변경되면 입고 매장(toStoreId)의 재고 추가
+    // 상태가 'completed'(완료)로 변경되면 입고 매장(fromStoreId = 요청한 매장)의 재고 추가
     if (req.body.status === 'completed' && oldStatus !== 'completed') {
       const storesData = await readJSON(STORES_FILE);
-      const toStore = storesData.stores.find(s => s.id === request.toStoreId);
+      const toStore = storesData.stores.find(s => s.id === request.fromStoreId);
       
       if (toStore) {
         // 재고 아이템 찾기 (item 이름으로 검색)
@@ -357,10 +434,10 @@ app.patch('/api/requests/:id', async (req, res) => {
         if (inventoryItem) {
           // 기존 재고가 있으면 창고 수량에 추가
           inventoryItem.stockQuantity = (inventoryItem.stockQuantity || 0) + request.quantity;
-          console.log(`✅ 재고 추가 완료 (입고): ${request.item} 창고 +${request.quantity}개`);
+          console.log(`✅ 재고 추가 완료 (입고): ${request.item} 창고 +${request.quantity}개 → ${toStore.name}`);
         } else {
           // 재고가 없으면 새로 생성 (출고 매장에서 정보 가져오기)
-          const fromStore = storesData.stores.find(s => s.id === request.fromStoreId);
+          const fromStore = storesData.stores.find(s => s.id === request.toStoreId);
           if (fromStore) {
             const fromItem = fromStore.inventory.find(i => i.id === request.item || `${i.name}_${i.color}` === request.item);
             if (fromItem) {

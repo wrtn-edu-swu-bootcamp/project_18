@@ -27,25 +27,38 @@ export default function Outgoing() {
 
   useEffect(() => {
     async function initializeStore() {
-      const storedName = localStorage.getItem('currentStore');
-      if (!storedName) {
+      console.log('📤 [Outgoing] 페이지 초기화 시작');
+      
+      const storedId = localStorage.getItem('currentStore');
+      console.log('📤 [Outgoing] localStorage.currentStore:', storedId);
+      console.log('📤 [Outgoing] localStorage 전체:', { ...localStorage });
+      
+      if (!storedId) {
+        console.log('❌ [Outgoing] currentStore가 없어서 로그인 페이지로 이동');
+        alert('로그인 정보가 없습니다. 다시 로그인해주세요.');
         navigate('/');
         return;
       }
       
       try {
         const stores = await getStores();
-        const store = stores.find(s => s.name === storedName);
+        console.log('📤 [Outgoing] 백엔드에서 가져온 매장 목록:', stores.map(s => s.id));
+        
+        const store = stores.find(s => s.id === storedId);
         
         if (!store) {
+          console.log('❌ [Outgoing] 매장을 찾을 수 없음:', storedId);
+          alert(`매장 "${storedId}"을 찾을 수 없습니다. 다시 로그인해주세요.`);
           navigate('/');
           return;
         }
         
+        console.log('✅ [Outgoing] 매장 찾음:', store);
         setCurrentStore(store);
         loadRequests(store.id);
       } catch (error) {
-        console.error('매장 정보 로드 실패:', error);
+        console.error('❌ [Outgoing] 매장 정보 로드 실패:', error);
+        alert('매장 정보를 불러오는데 실패했습니다.');
         navigate('/');
       }
     }
@@ -238,7 +251,7 @@ export default function Outgoing() {
                         {request.quantity}개
                       </td>
                       <td style={{ padding: '0.75rem', fontSize: '0.875rem' }}>
-                        {request.toStoreName}
+                        {request.fromStoreName}
                       </td>
                       <td style={{ padding: '0.75rem', fontSize: '0.875rem', textAlign: 'center', color: '#6b7280' }}>
                         {new Date(request.createdAt).toLocaleString('ko-KR', { 

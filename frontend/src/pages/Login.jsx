@@ -5,6 +5,7 @@ function Login() {
   const navigate = useNavigate();
   const [selectedStore, setSelectedStore] = useState('');
   const [adminName, setAdminName] = useState('');
+  const [adminEmail, setAdminEmail] = useState('');
 
   const stores = [
     { id: 'store-nowon', name: '노원점' },
@@ -29,9 +30,18 @@ function Login() {
     }
 
     const store = stores.find(s => s.id === selectedStore);
-    localStorage.setItem('myStore', store.name);
-    localStorage.setItem('currentStore', store.name);
+    localStorage.setItem('myStore', store.id);
+    localStorage.setItem('currentStore', store.id);
     localStorage.setItem('adminName', adminName);
+    localStorage.setItem('adminEmail', adminEmail || '');
+    
+    console.log('✅ 로그인 성공! localStorage 저장:', {
+      myStore: store.id,
+      currentStore: store.id,
+      adminName: adminName,
+      adminEmail: adminEmail || ''
+    });
+    
     navigate('/home');
   };
 
@@ -107,7 +117,7 @@ function Login() {
         </div>
 
         {/* 관리자 선택 영역 */}
-        <div style={{ marginBottom: '2rem' }}>
+        <div style={{ marginBottom: '1.5rem' }}>
           <label style={{
             display: 'block',
             fontSize: '0.875rem',
@@ -141,6 +151,46 @@ function Login() {
               </option>
             ))}
           </select>
+        </div>
+
+        {/* 이메일 입력 영역 */}
+        <div style={{ marginBottom: '2rem' }}>
+          <label style={{
+            display: 'block',
+            fontSize: '0.875rem',
+            fontWeight: '600',
+            color: '#374151',
+            marginBottom: '0.5rem'
+          }}>
+            📧 이메일 주소
+          </label>
+          <input
+            type="email"
+            value={adminEmail}
+            onChange={(e) => setAdminEmail(e.target.value)}
+            placeholder="이메일 주소 입력 (선택사항)"
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              fontSize: '1rem',
+              border: '2px solid #e5e7eb',
+              borderRadius: '0.5rem',
+              backgroundColor: 'white',
+              outline: 'none',
+              transition: '0.2s',
+              boxSizing: 'border-box'
+            }}
+            onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+            onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+          />
+          <p style={{
+            fontSize: '0.75rem',
+            color: '#6b7280',
+            marginTop: '0.5rem',
+            margin: '0.5rem 0 0 0'
+          }}>
+            💡 시뮬레이션 모드 (선택사항)
+          </p>
         </div>
 
         {/* 로그인 버튼 */}

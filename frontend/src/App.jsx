@@ -10,6 +10,8 @@ import History from './pages/History';
 import Repairs from './pages/Repairs';
 import AdminLogs from './pages/AdminLogs';
 import CustomerInfo from './pages/CustomerInfo';
+import CustomerEmail from './pages/CustomerEmail';
+import InventoryRequest from './pages/InventoryRequest';
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -54,6 +56,7 @@ function App() {
           <Route path="/" element={<Login />} />
           <Route path="/home" element={<Home />} />
           <Route path="/chat" element={<Chat />} />
+          <Route path="/inventory-request" element={<InventoryRequest />} />
           <Route path="/inventory" element={<CurrentInventory />} />
           <Route path="/incoming" element={<Incoming />} />
           <Route path="/outgoing" element={<Outgoing />} />
@@ -61,6 +64,7 @@ function App() {
           <Route path="/repairs" element={<Repairs />} />
           <Route path="/admin-logs" element={<AdminLogs />} />
           <Route path="/customer-info" element={<CustomerInfo />} />
+          <Route path="/customer-email" element={<CustomerEmail />} />
         </Routes>
       </Router>
     </div>

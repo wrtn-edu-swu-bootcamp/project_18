@@ -23,29 +23,47 @@ export default function Incoming() {
   const [currentStore, setCurrentStore] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('date-desc');
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [myEmail, setMyEmail] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
     async function initializeStore() {
-      const storedName = localStorage.getItem('currentStore');
-      if (!storedName) {
+      console.log('📥 [Incoming] 페이지 초기화 시작');
+      
+      const storedId = localStorage.getItem('currentStore');
+      const storedEmail = localStorage.getItem('adminEmail') || '';
+      setMyEmail(storedEmail);
+      console.log('📥 [Incoming] localStorage.currentStore:', storedId);
+      console.log('📥 [Incoming] localStorage.adminEmail:', storedEmail);
+      
+      if (!storedId) {
+        console.log('❌ [Incoming] currentStore가 없어서 로그인 페이지로 이동');
+        alert('로그인 정보가 없습니다. 다시 로그인해주세요.');
         navigate('/');
         return;
       }
       
       try {
         const stores = await getStores();
-        const store = stores.find(s => s.name === storedName);
+        console.log('📥 [Incoming] 백엔드에서 가져온 매장 목록:', stores.map(s => s.id));
+        
+        const store = stores.find(s => s.id === storedId);
         
         if (!store) {
+          console.log('❌ [Incoming] 매장을 찾을 수 없음:', storedId);
+          alert(`매장 "${storedId}"을 찾을 수 없습니다. 다시 로그인해주세요.`);
           navigate('/');
           return;
         }
         
+        console.log('✅ [Incoming] 매장 찾음:', store);
         setCurrentStore(store);
         loadRequests(store.id);
       } catch (error) {
-        console.error('매장 정보 로드 실패:', error);
+        console.error('❌ [Incoming] 매장 정보 로드 실패:', error);
+        alert('매장 정보를 불러오는데 실패했습니다.');
         navigate('/');
       }
     }
@@ -182,13 +200,14 @@ export default function Incoming() {
                   <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>요청자</th>
                   <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>특이사항</th>
                   <th style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>상태</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>주문서</th>
                   <th style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>완료</th>
                 </tr>
               </thead>
               <tbody>
                 {sortedRequests.length === 0 ? (
                   <tr>
-                    <td colSpan="8" style={{ padding: '3rem', textAlign: 'center', color: '#6b7280' }}>
+                    <td colSpan="9" style={{ padding: '3rem', textAlign: 'center', color: '#6b7280' }}>
                       {statusFilter === 'all' ? '입고 요청 내역이 없습니다.' : `${STATUS_LABELS[statusFilter]} 상태의 요청이 없습니다.`}
                     </td>
                   </tr>
@@ -246,6 +265,26 @@ export default function Incoming() {
                         </span>
                       </td>
                       <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                        <button
+                          onClick={() => {
+                            setSelectedRequest(request);
+                            setShowOrderModal(true);
+                          }}
+                          style={{
+                            backgroundColor: '#6366f1',
+                            color: 'white',
+                            padding: '0.375rem 0.75rem',
+                            borderRadius: '0.375rem',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontSize: '0.75rem',
+                            fontWeight: '500'
+                          }}
+                        >
+                          📄 보기
+                        </button>
+                      </td>
+                      <td style={{ padding: '0.75rem', textAlign: 'center' }}>
                         {request.status === 'in_transit' ? (
                           <button
                             onClick={() => {
@@ -280,6 +319,117 @@ export default function Incoming() {
           </div>
         </div>
       </div>
+
+      {/* 주문서 모달 */}
+      {showOrderModal && selectedRequest && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '0.75rem',
+            padding: '2rem',
+            width: '90%',
+            maxWidth: '600px',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
+          }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', borderBottom: '2px solid #3b82f6', paddingBottom: '0.5rem' }}>
+              📄 재고 요청 주문서
+            </h3>
+
+            {/* 발신자 정보 */}
+            <div style={{ marginBottom: '1.5rem', backgroundColor: '#eff6ff', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #3b82f6' }}>
+              <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: 0, marginBottom: '0.5rem' }}>보내는 사람</p>
+              <p style={{ fontSize: '1.125rem', fontWeight: '600', color: '#1f2937', margin: 0 }}>
+                {selectedRequest.fromStoreName} - {selectedRequest.adminName || '관리자'}
+              </p>
+              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0, marginTop: '0.25rem' }}>
+                📧 {selectedRequest.adminEmail || '이메일 미등록'}
+              </p>
+            </div>
+
+            {/* 수신자 정보 */}
+            <div style={{ marginBottom: '1.5rem', backgroundColor: '#f0fdf4', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #10b981' }}>
+              <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: 0, marginBottom: '0.5rem' }}>받는 사람</p>
+              <p style={{ fontSize: '1.125rem', fontWeight: '600', color: '#1f2937', margin: 0 }}>
+                {currentStore?.name}
+              </p>
+              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0, marginTop: '0.25rem' }}>
+                📧 {myEmail || '이메일 미등록'}
+              </p>
+            </div>
+
+            {/* 주문 내용 */}
+            <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f9fafb', borderRadius: '0.5rem' }}>
+              <table style={{ width: '100%', fontSize: '0.875rem' }}>
+                <tbody>
+                  <tr>
+                    <td style={{ padding: '0.5rem 0', color: '#6b7280', width: '30%' }}>📦 제품명</td>
+                    <td style={{ padding: '0.5rem 0', fontWeight: '600' }}>{selectedRequest.item}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '0.5rem 0', color: '#6b7280' }}>📏 사이즈</td>
+                    <td style={{ padding: '0.5rem 0', fontWeight: '600' }}>{selectedRequest.size || '-'}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '0.5rem 0', color: '#6b7280' }}>🔢 수량</td>
+                    <td style={{ padding: '0.5rem 0', fontWeight: '600', color: '#3b82f6' }}>{selectedRequest.quantity}개</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '0.5rem 0', color: '#6b7280' }}>📅 요청일</td>
+                    <td style={{ padding: '0.5rem 0' }}>
+                      {new Date(selectedRequest.createdAt || selectedRequest.requestDate).toLocaleString('ko-KR', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* 메시지 */}
+            <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#fef3c7', borderRadius: '0.5rem', border: '1px dashed #f59e0b' }}>
+              <p style={{ fontSize: '0.875rem', color: '#78350f', margin: 0, lineHeight: '1.6' }}>
+                안녕하세요,<br/>
+                재고 요청 부탁드립니다.<br/>
+                확인 후 출고 처리 부탁드리겠습니다.<br/>
+                감사합니다.
+              </p>
+            </div>
+
+            {/* 닫기 버튼 */}
+            <button
+              onClick={() => setShowOrderModal(false)}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.5rem',
+                fontSize: '1rem',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              닫기
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

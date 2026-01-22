@@ -23,15 +23,15 @@ export default function History() {
 
   useEffect(() => {
     async function initializeHistory() {
-      const storedName = localStorage.getItem('myStore');
-      if (!storedName) {
+      const storedId = localStorage.getItem('myStore');
+      if (!storedId) {
         navigate('/');
         return;
       }
       
       try {
         const stores = await getStores();
-        const store = stores.find(s => s.name === storedName);
+        const store = stores.find(s => s.id === storedId);
         
         if (!store) {
           navigate('/');
@@ -53,8 +53,8 @@ export default function History() {
   async function loadRequests(storeId) {
     try {
       const [sentRes, receivedRes] = await Promise.all([
-        fetch(`${API_BASE}/requests/incoming/${storeId}`),  // 요청한 거래 (toStoreId === myStore)
-        fetch(`${API_BASE}/requests/outgoing/${storeId}`)   // 받은 요청 (fromStoreId === myStore)
+        fetch(`${API_BASE}/requests/incoming/${storeId}`),  // 요청한 거래 (fromStoreId === myStore, 내가 다른 매장에 요청한 것)
+        fetch(`${API_BASE}/requests/outgoing/${storeId}`)   // 받은 요청 (toStoreId === myStore, 다른 매장이 나에게 요청한 것)
       ]);
       
       const sent = await sentRes.json();

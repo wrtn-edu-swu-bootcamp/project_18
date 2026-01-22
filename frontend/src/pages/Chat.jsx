@@ -44,16 +44,16 @@ export default function Chat() {
     isInitialized.current = true;
 
     async function initializeChat() {
-      const storedName = localStorage.getItem('myStore');
+      const storedId = localStorage.getItem('myStore');
       const storedAdminName = localStorage.getItem('adminName');
-      if (!storedName) {
+      if (!storedId) {
         navigate('/');
         return;
       }
       
       try {
         const stores = await getStores();
-        const store = stores.find(s => s.name === storedName);
+        const store = stores.find(s => s.id === storedId);
         
         if (!store) {
           navigate('/');

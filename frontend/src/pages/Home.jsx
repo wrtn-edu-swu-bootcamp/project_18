@@ -31,7 +31,7 @@ export default function Home() {
       let myStoreObj;
       
       if (storedMyStoreName) {
-        myStoreObj = stores.find(s => s.name === storedMyStoreName) || stores[0];
+        myStoreObj = stores.find(s => s.id === storedMyStoreName) || stores[0];
       } else {
         myStoreObj = stores.find(s => s.id === 'store-nowon') || stores[0];
       }
@@ -40,14 +40,14 @@ export default function Home() {
       loadTodayStats(myStoreObj.id);
       loadMonthlyStats(myStoreObj.id);
       
-      const storedCurrentName = localStorage.getItem('currentStore');
-      if (storedCurrentName) {
-        const currentStoreObj = stores.find(s => s.name === storedCurrentName) || myStoreObj;
+      const storedCurrentId = localStorage.getItem('currentStore');
+      if (storedCurrentId) {
+        const currentStoreObj = stores.find(s => s.id === storedCurrentId) || myStoreObj;
         setCurrentStore(currentStoreObj);
-        localStorage.setItem('currentStore', currentStoreObj.name);
+        localStorage.setItem('currentStore', currentStoreObj.id);
       } else {
         setCurrentStore(myStoreObj);
-        localStorage.setItem('currentStore', myStoreObj.name);
+        localStorage.setItem('currentStore', myStoreObj.id);
       }
     }
   }, [stores]);
@@ -335,9 +335,9 @@ export default function Home() {
                 </p>
               </div>
 
-              {/* 고객 알림톡 */}
+              {/* 고객 메일 */}
               <div
-                onClick={handleSendNotifications}
+                onClick={() => navigate('/customer-email')}
                 style={{
                   backgroundColor: todayStats.notifications > 0 ? '#fef3c7' : 'white',
                   border: `2px solid ${todayStats.notifications > 0 ? '#f59e0b' : '#e2e8f0'}`,
@@ -350,10 +350,10 @@ export default function Home() {
                 onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                  <span style={{ fontSize: '1.5rem' }}>💬</span>
-                  {todayStats.notifications > 0 && <span style={{ fontSize: '0.75rem', backgroundColor: '#f59e0b', color: 'white', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontWeight: '600' }}>긴급</span>}
+                  <span style={{ fontSize: '1.5rem' }}>📧</span>
+                  {todayStats.notifications > 0 && <span style={{ fontSize: '0.75rem', backgroundColor: '#f59e0b', color: 'white', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontWeight: '600' }}>대기</span>}
                 </div>
-                <p style={{ fontSize: '0.875rem', color: '#64748b', margin: 0, marginBottom: '0.5rem' }}>고객 알림톡</p>
+                <p style={{ fontSize: '0.875rem', color: '#64748b', margin: 0, marginBottom: '0.5rem' }}>고객 메일</p>
                 <p style={{ fontSize: '2rem', fontWeight: 'bold', color: todayStats.notifications > 0 ? '#d97706' : '#94a3b8', margin: 0 }}>
                   {todayStats.notifications}
                 </p>
@@ -369,12 +369,12 @@ export default function Home() {
               빠른 액션
             </h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.75rem' }}>
-              <Link to="/chat" style={{ textDecoration: 'none' }}>
+              <Link to="/inventory-request" style={{ textDecoration: 'none' }}>
                 <div style={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '0.5rem', padding: '1rem', textAlign: 'center', cursor: 'pointer', transition: '0.2s' }}
                   onMouseOver={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 4px 6px rgba(59,130,246,0.1)'; }}
                   onMouseOut={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; }}>
-                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🤖</div>
-                  <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#0f172a', margin: 0 }}>재고봇</p>
+                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📧</div>
+                  <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#0f172a', margin: 0 }}>재고 요청</p>
                 </div>
               </Link>
               <Link to="/inventory" style={{ textDecoration: 'none' }}>
@@ -395,7 +395,7 @@ export default function Home() {
               </Link>
               <Link to="/customer-info" style={{ textDecoration: 'none' }}>
                 <div style={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '0.5rem', padding: '1rem', textAlign: 'center', cursor: 'pointer', transition: '0.2s' }}
-                  onMouseOver={(e) => { e.currentTarget.style.borderColor = '#f59e0b'; e.currentTarget.style.boxShadow = '0 4px 6px rgba(245,158,11,0.1)'; }}
+                  onMouseOver={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 4px 6px rgba(59,130,246,0.1)'; }}
                   onMouseOut={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; }}>
                   <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>👥</div>
                   <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#0f172a', margin: 0 }}>고객 정보</p>
@@ -413,20 +413,6 @@ export default function Home() {
             </h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '0.75rem' }}>
               
-              {/* 평균 처리 시간 */}
-              <div style={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '0.5rem', padding: '1.25rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                  <span style={{ fontSize: '1.5rem' }}>⏱️</span>
-                  <span style={{ fontSize: '0.75rem', color: monthlyStats.avgProcessingTime <= 24 ? '#10b981' : '#ef4444', fontWeight: '600' }}>
-                    {monthlyStats.avgProcessingTime <= 24 ? '✓' : '⚠'}
-                  </span>
-                </div>
-                <p style={{ fontSize: '0.875rem', color: '#64748b', margin: 0, marginBottom: '0.5rem' }}>평균 처리 시간</p>
-                <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#0f172a', margin: 0 }}>
-                  {monthlyStats.avgProcessingTime}시간
-                </p>
-              </div>
-
                {/* 진열 공백 */}
                <div style={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '0.5rem', padding: '1.25rem' }}>
                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>

@@ -19,6 +19,25 @@ function generateRandomCustomer(offsetMinutes = 0) {
   const style = STYLES[Math.floor(Math.random() * STYLES.length)];
   const phone = `010-${Math.floor(Math.random() * 9000) + 1000}-${Math.floor(Math.random() * 900) + 100}`;
   
+  // 이메일 생성
+  const emailDomains = ['gmail.com', 'naver.com', 'daum.net', 'kakao.com'];
+  const selectedDomain = emailDomains[Math.floor(Math.random() * emailDomains.length)];
+  
+  let emailPrefix;
+  if (selectedDomain === 'gmail.com') {
+    // Gmail: 영문 + 숫자 조합 (점이나 언더스코어 포함 가능)
+    const randomLetters = Math.random().toString(36).substring(2, 8); // 랜덤 영문
+    const randomNumbers = Math.floor(Math.random() * 9999) + 100;
+    const separators = ['.', '_', ''];
+    const separator = separators[Math.floor(Math.random() * separators.length)];
+    emailPrefix = `${randomLetters}${separator}${randomNumbers}`;
+  } else {
+    // 네이버, 다음, 카카오: 한글 이름 기반
+    emailPrefix = `${firstName.toLowerCase()}${Math.floor(Math.random() * 999) + 1}`;
+  }
+  
+  const email = `${emailPrefix}@${selectedDomain}`;
+  
   // 구매 이력 (1-3개)
   const purchaseCount = Math.floor(Math.random() * 3) + 1;
   const purchases = [];
@@ -46,6 +65,7 @@ function generateRandomCustomer(offsetMinutes = 0) {
     age,
     style,
     phone,
+    email,
     purchases,
     totalAmount,
     visitedAt: visitedAt.toISOString(),
@@ -66,15 +86,15 @@ export default function CustomerInfo() {
 
   useEffect(() => {
     async function initialize() {
-      const storedName = localStorage.getItem('myStore');
-      if (!storedName) {
+      const storedId = localStorage.getItem('myStore');
+      if (!storedId) {
         navigate('/');
         return;
       }
       
       try {
         const stores = await getStores();
-        const store = stores.find(s => s.name === storedName);
+        const store = stores.find(s => s.id === storedId);
         
         if (!store) {
           navigate('/');
@@ -83,11 +103,13 @@ export default function CustomerInfo() {
         
         setCurrentStore(store);
         
-        // 초기 더미 데이터 3명 생성 (다른 시간대에 방문한 것처럼)
+        // 초기 더미 데이터 5명 생성 (다른 시간대에 방문한 것처럼)
         const initialCustomers = [
-          generateRandomCustomer(30), // 30분 전
-          generateRandomCustomer(15), // 15분 전
-          generateRandomCustomer(0)   // 지금
+          generateRandomCustomer(120), // 2시간 전
+          generateRandomCustomer(90),  // 1시간 30분 전
+          generateRandomCustomer(60),  // 1시간 전
+          generateRandomCustomer(30),  // 30분 전
+          generateRandomCustomer(0)    // 지금
         ];
         setCustomers(initialCustomers);
       } catch (error) {
@@ -99,13 +121,13 @@ export default function CustomerInfo() {
     initialize();
   }, [navigate]);
 
-  // 5분마다 자동으로 고객 추가
+  // 3분마다 자동으로 고객 추가
   useEffect(() => {
     const interval = setInterval(() => {
       const newCustomer = generateRandomCustomer();
       setCustomers(prev => [newCustomer, ...prev]);
       console.log('🆕 새로운 고객 정보 추가:', newCustomer.name);
-    }, 5 * 60 * 1000); // 5분 = 300,000ms
+    }, 3 * 60 * 1000); // 3분 = 180,000ms
     
     return () => clearInterval(interval);
   }, []);
@@ -132,189 +154,192 @@ export default function CustomerInfo() {
     
     // 검색어 필터
     if (searchTerm) {
+      const lowerSearch = searchTerm.toLowerCase();
       filtered = filtered.filter(c => 
-        c.name.includes(searchTerm) || 
+        c.name.includes(searchTerm) ||
         c.phone.includes(searchTerm) ||
-        c.purchases.some(p => p.item.includes(searchTerm.toUpperCase()))
+        c.email.toLowerCase().includes(lowerSearch) ||
+        c.purchases.some(p => p.item.toLowerCase().includes(lowerSearch))
       );
     }
     
     setFilteredCustomers(filtered);
   }, [customers, filterStyle, filterAge, searchTerm]);
 
-  function formatTimestamp(timestamp) {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diff = now - date;
-    const minutes = Math.floor(diff / 60000);
-    
-    if (minutes < 1) return '방금 전';
-    if (minutes < 60) return `${minutes}분 전`;
-    
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}시간 전`;
-    
-    return date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-  }
-
   function handleViewDetail(customer) {
     setSelectedCustomer(customer);
     setShowDetail(true);
   }
 
+  function formatTimestamp(timestamp) {
+    const date = new Date(timestamp);
+    return date.toLocaleString('ko-KR', { 
+      month: 'short', 
+      day: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  }
+
+  if (!currentStore) {
+    return <div style={{ padding: '2rem', textAlign: 'center' }}>로딩 중...</div>;
+  }
+
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb', padding: '2rem' }}>
       {/* 헤더 */}
-      <div style={{ backgroundColor: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-        <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <button
-              onClick={() => navigate('/home')}
-              style={{ marginRight: '1rem', color: '#6b7280', background: 'none', border: 'none', fontSize: '1rem', cursor: 'pointer' }}
-            >
-              ← 뒤로
-            </button>
-            <div>
-              <h1 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#111827' }}>👥 고객 정보</h1>
-              <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>{currentStore?.name} - 총 {customers.length}명</p>
-            </div>
-          </div>
-          <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-            ⏰ 5분마다 자동 업데이트
-          </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <button
+            onClick={() => navigate('/home')}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: 'white',
+              border: '1px solid #d1d5db',
+              borderRadius: '0.5rem',
+              cursor: 'pointer',
+              fontSize: '0.875rem'
+            }}
+          >
+            ← 뒤로
+          </button>
+          <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', color: '#111827', margin: 0 }}>
+            👥 고객 정보
+          </h1>
+        </div>
+        <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+          {currentStore.name}
         </div>
       </div>
 
-      <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '1.5rem 1rem' }}>
-        {/* 필터 & 검색 */}
-        <div style={{ backgroundColor: 'white', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', padding: '1.5rem', marginBottom: '1.5rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: '#374151' }}>
-                스타일
-              </label>
-              <select
-                value={filterStyle}
-                onChange={(e) => setFilterStyle(e.target.value)}
-                style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', fontSize: '0.875rem', cursor: 'pointer' }}
-              >
-                <option value="all">전체</option>
-                {STYLES.map(style => (
-                  <option key={style} value={style}>{style}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: '#374151' }}>
-                연령대
-              </label>
-              <select
-                value={filterAge}
-                onChange={(e) => setFilterAge(e.target.value)}
-                style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', fontSize: '0.875rem', cursor: 'pointer' }}
-              >
-                <option value="all">전체</option>
-                <option value="20s">20대</option>
-                <option value="30s">30대</option>
-                <option value="40s">40대</option>
-                <option value="50s">50대 이상</option>
-              </select>
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: '#374151' }}>
-                검색
-              </label>
-              <input
-                type="text"
-                placeholder="이름, 전화번호, 상품명"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', fontSize: '0.875rem' }}
-              />
-            </div>
+      {/* 필터 영역 */}
+      <div style={{ backgroundColor: 'white', borderRadius: '0.5rem', padding: '1.5rem', marginBottom: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: '#374151' }}>
+              스타일 선호도
+            </label>
+            <select
+              value={filterStyle}
+              onChange={(e) => setFilterStyle(e.target.value)}
+              style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', fontSize: '0.875rem', cursor: 'pointer' }}
+            >
+              <option value="all">전체</option>
+              {STYLES.map(style => (
+                <option key={style} value={style}>{style}</option>
+              ))}
+            </select>
           </div>
-          <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-            총 {filteredCustomers.length}명의 고객 정보
+          <div>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: '#374151' }}>
+              연령대
+            </label>
+            <select
+              value={filterAge}
+              onChange={(e) => setFilterAge(e.target.value)}
+              style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', fontSize: '0.875rem', cursor: 'pointer' }}
+            >
+              <option value="all">전체</option>
+              <option value="20s">20대</option>
+              <option value="30s">30대</option>
+              <option value="40s">40대</option>
+              <option value="50s">50대 이상</option>
+            </select>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: '#374151' }}>
+              검색
+            </label>
+            <input
+              type="text"
+              placeholder="이름, 전화번호, 이메일, 상품명"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+            />
           </div>
         </div>
+        <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+          총 {filteredCustomers.length}명의 고객 정보 | 💡 스타일 선호도와 구매 이력을 기반으로 고객을 분석합니다
+        </div>
+      </div>
 
-        {/* 고객 테이블 */}
-        <div style={{ backgroundColor: 'white', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ backgroundColor: '#f3f4f6' }}>
+      {/* 고객 테이블 */}
+      <div style={{ backgroundColor: 'white', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead style={{ backgroundColor: '#f3f4f6' }}>
+              <tr>
+                <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>고객명</th>
+                <th style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>연령</th>
+                <th style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>스타일</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>이메일</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>최근 구매</th>
+                <th style={{ padding: '0.75rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>총 구매액</th>
+                <th style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>방문 시간</th>
+                <th style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>상세</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredCustomers.length === 0 ? (
                 <tr>
-                  <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>고객명</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>연령</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>스타일</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>최근 구매</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>구매액</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>전화번호</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>방문 시간</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>상세</th>
+                  <td colSpan="8" style={{ padding: '3rem', textAlign: 'center', color: '#6b7280' }}>
+                    고객 정보가 없습니다.
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {filteredCustomers.length === 0 ? (
-                  <tr>
-                    <td colSpan="8" style={{ padding: '3rem', textAlign: 'center', color: '#6b7280' }}>
-                      고객 정보가 없습니다.
+              ) : (
+                filteredCustomers.map((customer) => (
+                  <tr key={customer.id} style={{ borderTop: '1px solid #e5e7eb' }}>
+                    <td style={{ padding: '0.75rem', fontSize: '0.875rem', fontWeight: '500' }}>{customer.name}</td>
+                    <td style={{ padding: '0.75rem', fontSize: '0.875rem', textAlign: 'center' }}>{customer.age}세</td>
+                    <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                      <span style={{ 
+                        fontSize: '0.75rem', 
+                        padding: '0.25rem 0.5rem', 
+                        backgroundColor: '#dbeafe', 
+                        color: '#1e40af', 
+                        borderRadius: '0.25rem',
+                        fontWeight: '600'
+                      }}>
+                        {customer.style}
+                      </span>
+                    </td>
+                    <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#3b82f6' }}>{customer.email}</td>
+                    <td style={{ padding: '0.75rem', fontSize: '0.875rem' }}>
+                      {customer.purchases[0]?.item} {customer.purchases.length > 1 && `외 ${customer.purchases.length - 1}개`}
+                    </td>
+                    <td style={{ padding: '0.75rem', fontSize: '0.875rem', textAlign: 'right', fontWeight: '600' }}>
+                      {customer.totalAmount.toLocaleString()}원
+                    </td>
+                    <td style={{ padding: '0.75rem', fontSize: '0.75rem', textAlign: 'center', color: '#6b7280' }}>
+                      {formatTimestamp(customer.visitedAt)}
+                    </td>
+                    <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                      <button
+                        onClick={() => handleViewDetail(customer)}
+                        style={{
+                          padding: '0.375rem 0.75rem',
+                          backgroundColor: '#3b82f6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '0.375rem',
+                          fontSize: '0.75rem',
+                          fontWeight: '500',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        📊 보기
+                      </button>
                     </td>
                   </tr>
-                ) : (
-                  filteredCustomers.map((customer) => (
-                    <tr key={customer.id} style={{ borderTop: '1px solid #e5e7eb' }}>
-                      <td style={{ padding: '0.75rem', fontSize: '0.875rem', fontWeight: '500' }}>{customer.name}</td>
-                      <td style={{ padding: '0.75rem', fontSize: '0.875rem', textAlign: 'center' }}>{customer.age}세</td>
-                      <td style={{ padding: '0.75rem', textAlign: 'center' }}>
-                        <span style={{ 
-                          fontSize: '0.75rem', 
-                          padding: '0.25rem 0.5rem', 
-                          backgroundColor: '#dbeafe', 
-                          color: '#1e40af', 
-                          borderRadius: '0.25rem',
-                          fontWeight: '600'
-                        }}>
-                          {customer.style}
-                        </span>
-                      </td>
-                      <td style={{ padding: '0.75rem', fontSize: '0.875rem' }}>
-                        {customer.purchases[0]?.item} {customer.purchases.length > 1 && `외 ${customer.purchases.length - 1}개`}
-                      </td>
-                      <td style={{ padding: '0.75rem', fontSize: '0.875rem', textAlign: 'right', fontWeight: '600' }}>
-                        {customer.totalAmount.toLocaleString()}원
-                      </td>
-                      <td style={{ padding: '0.75rem', fontSize: '0.875rem', fontFamily: 'monospace' }}>{customer.phone}</td>
-                      <td style={{ padding: '0.75rem', fontSize: '0.75rem', textAlign: 'center', color: '#6b7280' }}>
-                        {formatTimestamp(customer.visitedAt)}
-                      </td>
-                      <td style={{ padding: '0.75rem', textAlign: 'center' }}>
-                        <button
-                          onClick={() => handleViewDetail(customer)}
-                          style={{
-                            padding: '0.375rem 0.75rem',
-                            backgroundColor: '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '0.375rem',
-                            fontSize: '0.75rem',
-                            fontWeight: '500',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          보기
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* 상세 정보 모달 */}
+      {/* 고객 상세 정보 모달 */}
       {showDetail && selectedCustomer && (
         <div style={{
           position: 'fixed',
@@ -339,7 +364,7 @@ export default function CustomerInfo() {
             overflowY: 'auto'
           }}>
             <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1.5rem', color: '#111827' }}>
-              👤 고객 상세 정보
+              📊 고객 프로필 분석
             </h2>
             
             <div style={{ marginBottom: '1.5rem' }}>
@@ -353,17 +378,21 @@ export default function CustomerInfo() {
                   <p style={{ fontSize: '1rem', fontWeight: '600', color: '#111827' }}>{selectedCustomer.age}세</p>
                 </div>
                 <div>
-                  <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>스타일</p>
+                  <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>선호 스타일</p>
                   <p style={{ fontSize: '1rem', fontWeight: '600', color: '#111827' }}>{selectedCustomer.style}</p>
                 </div>
                 <div>
                   <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>전화번호</p>
                   <p style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', fontFamily: 'monospace' }}>{selectedCustomer.phone}</p>
                 </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>📧 이메일</p>
+                  <p style={{ fontSize: '1rem', fontWeight: '600', color: '#111827' }}>{selectedCustomer.email}</p>
+                </div>
               </div>
               
               <div style={{ marginTop: '1.5rem' }}>
-                <p style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem', color: '#111827' }}>구매 내역</p>
+                <p style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem', color: '#111827' }}>📦 구매 이력</p>
                 {selectedCustomer.purchases.map((purchase, index) => (
                   <div key={index} style={{ 
                     padding: '0.75rem', 
@@ -400,7 +429,7 @@ export default function CustomerInfo() {
               </div>
               
               <div style={{ marginTop: '1.5rem' }}>
-                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>방문 시간</p>
+                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>🕒 최근 방문 시간</p>
                 <p style={{ fontSize: '0.875rem', color: '#111827' }}>
                   {new Date(selectedCustomer.visitedAt).toLocaleString('ko-KR')}
                 </p>
