@@ -9,7 +9,7 @@ export default function Home() {
   const [currentStore, setCurrentStore] = useState(null);
   const [myStore, setMyStore] = useState(null);
   const [adminName, setAdminName] = useState('');
-  const [todayStats, setTodayStats] = useState({ outgoing: 0, repairs: 0, notifications: 0, pending: 0 });
+  const [todayStats, setTodayStats] = useState({ outgoing: 0, repairs: 0, pending: 0 });
   const [monthlyStats, setMonthlyStats] = useState({ 
     topRequests: [], 
     emptyDisplay: [], 
@@ -75,8 +75,7 @@ export default function Home() {
       
       setTodayStats({
         outgoing: outgoing.filter(r => r.status === 'requested' || r.status === 'approved').length,
-        repairs: repairs.filter(r => r.repairStatus === '수선 완료' && (!r.delivered || r.paymentStatus === '미불')).length,
-        notifications: repairs.filter(r => r.repairStatus === '수선 완료' && !r.delivered && !r.notificationSent).length,
+        repairs: repairs.filter(r => r.repairStatus === '수선 완료' && !r.delivered).length,
         pending: requests.filter(r => r.status !== 'completed').length
       });
     } catch (error) {
@@ -139,67 +138,6 @@ export default function Home() {
       });
     } catch (error) {
       console.error('월간 통계 불러오기 실패:', error);
-    }
-  }
-
-  async function handleSendNotifications() {
-    if (!myStore) return;
-    
-    try {
-      // 수선 완료된 고객 목록 가져오기
-      const response = await fetch(`${API_BASE}/repairs/store/${myStore.id}`);
-      const repairs = await response.json();
-      
-      // 수선 완료되었지만 아직 전달되지 않고 알림톡도 보내지 않은 고객들
-      const completedNotDelivered = repairs.filter(
-        repair => repair.repairStatus === '수선 완료' && !repair.delivered && !repair.notificationSent
-      );
-      
-      if (completedNotDelivered.length === 0) {
-        alert('알림을 보낼 고객이 없습니다.\n수선 완료 후 미전달 고객만 알림톡이 발송됩니다.');
-        return;
-      }
-      
-      // 알림톡 메시지 생성
-      const messages = completedNotDelivered.map(repair => {
-        const customerName = repair.customerName;
-        const productName = repair.productId;
-        return `${customerName}님, 맡기신 ${productName} 수선이 완료되었습니다.`;
-      });
-      
-      // 확인 다이얼로그
-      const confirmMessage = `${completedNotDelivered.length}명의 고객에게 알림톡을 발송하시겠습니까?\n\n` +
-        messages.slice(0, 3).join('\n') + 
-        (messages.length > 3 ? `\n... 외 ${messages.length - 3}명` : '');
-      
-      if (!window.confirm(confirmMessage)) {
-        return;
-      }
-      
-      // 알림톡 발송 시뮬레이션
-      console.log('📱 [알림톡 발송 시뮬레이션]');
-      messages.forEach((msg, index) => {
-        console.log(`${index + 1}. ${msg}`);
-      });
-      
-      // 모든 고객의 notificationSent를 true로 업데이트
-      for (const repair of completedNotDelivered) {
-        await fetch(`${API_BASE}/repairs/${repair.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ notificationSent: true })
-        });
-      }
-      
-      // 성공 메시지
-      alert(`✅ ${completedNotDelivered.length}명에게 알림톡이 발송되었습니다!\n\n자세한 내용은 콘솔을 확인해주세요.`);
-      
-      // 통계 다시 로드
-      loadTodayStats(myStore.id);
-      
-    } catch (error) {
-      console.error('알림톡 발송 실패:', error);
-      alert('알림톡 발송에 실패했습니다.');
     }
   }
 
@@ -287,7 +225,7 @@ export default function Home() {
                 </p>
               </div>
 
-              {/* 수선 전달 */}
+              {/* 수선 완료 */}
               <div
                 onClick={() => navigate('/repairs', { state: { initialTab: '수선 완료' } })}
                 style={{
@@ -305,7 +243,7 @@ export default function Home() {
                   <span style={{ fontSize: '1.5rem' }}>🧵</span>
                   {todayStats.repairs > 0 && <span style={{ fontSize: '0.75rem', backgroundColor: '#ec4899', color: 'white', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontWeight: '600' }}>긴급</span>}
                 </div>
-                <p style={{ fontSize: '0.875rem', color: '#64748b', margin: 0, marginBottom: '0.5rem' }}>수선 전달</p>
+                <p style={{ fontSize: '0.875rem', color: '#64748b', margin: 0, marginBottom: '0.5rem' }}>수선 완료</p>
                 <p style={{ fontSize: '2rem', fontWeight: 'bold', color: todayStats.repairs > 0 ? '#db2777' : '#94a3b8', margin: 0 }}>
                   {todayStats.repairs}
                 </p>
@@ -332,30 +270,6 @@ export default function Home() {
                 <p style={{ fontSize: '0.875rem', color: '#64748b', margin: 0, marginBottom: '0.5rem' }}>입고 처리</p>
                 <p style={{ fontSize: '2rem', fontWeight: 'bold', color: todayStats.pending > 0 ? '#2563eb' : '#94a3b8', margin: 0 }}>
                   {todayStats.pending}
-                </p>
-              </div>
-
-              {/* 고객 알림톡 */}
-              <div
-                onClick={handleSendNotifications}
-                style={{
-                  backgroundColor: todayStats.notifications > 0 ? '#fef3c7' : 'white',
-                  border: `2px solid ${todayStats.notifications > 0 ? '#f59e0b' : '#e2e8f0'}`,
-                  borderRadius: '0.5rem',
-                  padding: '1.25rem',
-                  cursor: 'pointer',
-                  transition: '0.2s'
-                }}
-                onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                  <span style={{ fontSize: '1.5rem' }}>💬</span>
-                  {todayStats.notifications > 0 && <span style={{ fontSize: '0.75rem', backgroundColor: '#f59e0b', color: 'white', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontWeight: '600' }}>긴급</span>}
-                </div>
-                <p style={{ fontSize: '0.875rem', color: '#64748b', margin: 0, marginBottom: '0.5rem' }}>고객 알림톡</p>
-                <p style={{ fontSize: '2rem', fontWeight: 'bold', color: todayStats.notifications > 0 ? '#d97706' : '#94a3b8', margin: 0 }}>
-                  {todayStats.notifications}
                 </p>
               </div>
             </div>
@@ -385,20 +299,20 @@ export default function Home() {
                   <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#0f172a', margin: 0 }}>재고 관리</p>
                 </div>
               </Link>
+              <Link to="/history" style={{ textDecoration: 'none' }}>
+                <div style={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '0.5rem', padding: '1rem', textAlign: 'center', cursor: 'pointer', transition: '0.2s' }}
+                  onMouseOver={(e) => { e.currentTarget.style.borderColor = '#8b5cf6'; e.currentTarget.style.boxShadow = '0 4px 6px rgba(139,92,246,0.1)'; }}
+                  onMouseOut={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; }}>
+                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📊</div>
+                  <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#0f172a', margin: 0 }}>거래 내역</p>
+                </div>
+              </Link>
               <Link to="/repairs" style={{ textDecoration: 'none' }}>
                 <div style={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '0.5rem', padding: '1rem', textAlign: 'center', cursor: 'pointer', transition: '0.2s' }}
                   onMouseOver={(e) => { e.currentTarget.style.borderColor = '#ec4899'; e.currentTarget.style.boxShadow = '0 4px 6px rgba(236,72,153,0.1)'; }}
                   onMouseOut={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; }}>
                   <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🧵</div>
                   <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#0f172a', margin: 0 }}>수선 관리</p>
-                </div>
-              </Link>
-              <Link to="/customer-info" style={{ textDecoration: 'none' }}>
-                <div style={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '0.5rem', padding: '1rem', textAlign: 'center', cursor: 'pointer', transition: '0.2s' }}
-                  onMouseOver={(e) => { e.currentTarget.style.borderColor = '#f59e0b'; e.currentTarget.style.boxShadow = '0 4px 6px rgba(245,158,11,0.1)'; }}
-                  onMouseOut={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; }}>
-                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>👥</div>
-                  <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#0f172a', margin: 0 }}>고객 정보</p>
                 </div>
               </Link>
             </div>
@@ -427,106 +341,31 @@ export default function Home() {
                 </p>
               </div>
 
-               {/* 진열 공백 */}
-               <div style={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '0.5rem', padding: '1.25rem' }}>
-                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                     <span style={{ fontSize: '1.5rem' }}>⚠️</span>
-                     <p style={{ fontSize: '0.875rem', color: '#64748b', margin: 0, fontWeight: '600' }}>진열 공백 품목</p>
-                   </div>
-                   <span style={{ fontSize: '0.75rem', color: monthlyStats.emptyDisplay.length > 0 ? '#f59e0b' : '#10b981', fontWeight: '600' }}>
-                     {monthlyStats.emptyDisplay.length > 0 ? '주의' : '양호'}
-                   </span>
-                 </div>
-                 <div style={{ marginTop: '0.75rem' }}>
-                   {monthlyStats.emptyDisplay.length > 0 ? (
-                     monthlyStats.emptyDisplay.map((item, index) => (
-                       <div key={index} style={{ 
-                         padding: '0.5rem 0.75rem',
-                         marginBottom: '0.5rem',
-                         backgroundColor: '#fffbeb',
-                         borderRadius: '0.375rem',
-                         border: '1px solid #fbbf24',
-                         display: 'flex',
-                         justifyContent: 'space-between',
-                         alignItems: 'center'
-                       }}>
-                         <span style={{ fontSize: '0.875rem', color: '#92400e', fontWeight: '500' }}>
-                           {item.item}
-                         </span>
-                         <span style={{ fontSize: '0.75rem', color: '#78350f', backgroundColor: '#fef3c7', padding: '0.25rem 0.5rem', borderRadius: '0.25rem' }}>
-                           창고 {item.stockQuantity}개
-                         </span>
-                       </div>
-                     ))
-                   ) : (
-                     <p style={{ fontSize: '0.875rem', color: '#10b981', textAlign: 'center', padding: '1rem 0', margin: 0 }}>
-                       ✓ 모든 품목 진열 중
-                     </p>
-                   )}
-                 </div>
-               </div>
+              {/* 진열 공백 */}
+              <div style={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '0.5rem', padding: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                  <span style={{ fontSize: '1.5rem' }}>⚠️</span>
+                  <span style={{ fontSize: '0.75rem', color: monthlyStats.emptyDisplay.length > 0 ? '#f59e0b' : '#10b981', fontWeight: '600' }}>
+                    {monthlyStats.emptyDisplay.length > 0 ? '주의' : '양호'}
+                  </span>
+                </div>
+                <p style={{ fontSize: '0.875rem', color: '#64748b', margin: 0, marginBottom: '0.5rem' }}>진열 공백 품목</p>
+                <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#0f172a', margin: 0 }}>
+                  {monthlyStats.emptyDisplay.length}개
+                </p>
+              </div>
 
-               {/* TOP 요청 */}
-               <div style={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '0.5rem', padding: '1.25rem' }}>
-                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                   <span style={{ fontSize: '1.5rem' }}>🏆</span>
-                   <p style={{ fontSize: '0.875rem', color: '#64748b', margin: 0, fontWeight: '600' }}>인기 품목 TOP 3</p>
-                 </div>
-                 <div style={{ marginTop: '0.75rem' }}>
-                   {monthlyStats.topRequests.length > 0 ? (
-                     monthlyStats.topRequests.slice(0, 3).map((item, index) => (
-                       <div key={index} style={{ 
-                         padding: '0.5rem 0.75rem',
-                         marginBottom: '0.5rem',
-                         backgroundColor: index === 0 ? '#fef3c7' : '#f8fafc',
-                         borderRadius: '0.375rem',
-                         border: `1px solid ${index === 0 ? '#fbbf24' : '#e2e8f0'}`,
-                         display: 'flex',
-                         justifyContent: 'space-between',
-                         alignItems: 'center'
-                       }}>
-                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                           <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: index === 0 ? '#d97706' : '#64748b' }}>
-                             {index + 1}
-                           </span>
-                           <span style={{ fontSize: '0.875rem', color: '#0f172a', fontWeight: '500' }}>
-                             {item.item}
-                           </span>
-                         </div>
-                         <span style={{ fontSize: '0.875rem', fontWeight: 'bold', color: '#3b82f6' }}>
-                           {item.count}개
-                         </span>
-                       </div>
-                     ))
-                   ) : (
-                     <p style={{ fontSize: '0.875rem', color: '#94a3b8', textAlign: 'center', padding: '1rem 0', margin: 0 }}>
-                       데이터 없음
-                     </p>
-                   )}
-                 </div>
-               </div>
+              {/* TOP 요청 */}
+              <div style={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '0.5rem', padding: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                  <span style={{ fontSize: '1.5rem' }}>🏆</span>
+                </div>
+                <p style={{ fontSize: '0.875rem', color: '#64748b', margin: 0, marginBottom: '0.5rem' }}>인기 품목</p>
+                <p style={{ fontSize: '1rem', fontWeight: 'bold', color: '#0f172a', margin: 0 }}>
+                  {monthlyStats.topRequests.length > 0 ? monthlyStats.topRequests[0].item : '데이터 없음'}
+                </p>
+              </div>
 
-            </div>
-          </div>
-        )}
-
-        {/* 데이터 조회 - 간단한 링크 */}
-        {isMyStore && (
-          <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid #e2e8f0' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', flexWrap: 'wrap' }}>
-              <Link to="/history" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem', backgroundColor: '#f8fafc', borderRadius: '0.5rem', transition: '0.2s' }}
-                onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#e2e8f0'; }}
-                onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; }}>
-                <span style={{ fontSize: '1.25rem' }}>📊</span>
-                <span style={{ fontSize: '0.875rem', color: '#475569', fontWeight: '600' }}>전체 거래 내역</span>
-              </Link>
-              <Link to="/admin-logs" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem', backgroundColor: '#f8fafc', borderRadius: '0.5rem', transition: '0.2s' }}
-                onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#e2e8f0'; }}
-                onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; }}>
-                <span style={{ fontSize: '1.25rem' }}>📋</span>
-                <span style={{ fontSize: '0.875rem', color: '#475569', fontWeight: '600' }}>관리자 기록</span>
-              </Link>
             </div>
           </div>
         )}

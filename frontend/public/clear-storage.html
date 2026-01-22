@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>localStorage 초기화</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: Arial, sans-serif;
+      margin: 0;
+    }
+    .container {
+      background: white;
+      padding: 3rem;
+      border-radius: 1rem;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      text-align: center;
+      max-width: 500px;
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 1rem;
+      font-size: 2rem;
+    }
+    p {
+      color: #666;
+      margin-bottom: 2rem;
+      line-height: 1.6;
+    }
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 1rem 2rem;
+      font-size: 1.1rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: 0.3s;
+      font-weight: 600;
+    }
+    button:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    .success {
+      color: #10b981;
+      font-weight: 600;
+      margin-top: 1rem;
+      display: none;
+    }
+    .info {
+      background: #eff6ff;
+      border: 2px solid #3b82f6;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      margin-top: 1.5rem;
+      font-size: 0.9rem;
+      color: #1e40af;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div style="font-size: 4rem; margin-bottom: 1rem;">🗑️</div>
+    <h1>localStorage 초기화</h1>
+    <p>
+      S2S 재고 관리 시스템의 저장된 데이터를<br>
+      모두 초기화하고 처음부터 다시 시작합니다.
+    </p>
+    <button onclick="clearStorage()">초기화 및 로그인 페이지로 이동</button>
+    <p class="success" id="success">✓ 초기화 완료! 잠시 후 이동합니다...</p>
+    <div class="info">
+      <strong>💡 언제 사용하나요?</strong><br>
+      페이지 이동이 안되거나 오류가 발생할 때 사용하세요.
+    </div>
+  </div>
+
+  <script>
+    function clearStorage() {
+      console.log('=== localStorage 초기화 시작 ===');
+      
+      // 현재 저장된 데이터 확인
+      console.log('초기화 전 localStorage:', {
+        myStore: localStorage.getItem('myStore'),
+        currentStore: localStorage.getItem('currentStore')
+      });
+      
+      // 모든 localStorage 데이터 삭제
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      console.log('localStorage 초기화 완료!');
+      
+      // 성공 메시지 표시
+      document.getElementById('success').style.display = 'block';
+      
+      // 2초 후 로그인 페이지로 이동
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 2000);
+    }
+  </script>
+</body>
+</html>

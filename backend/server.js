@@ -17,6 +17,7 @@ app.use(express.json());
 // 데이터 파일 경로
 const STORES_FILE = path.join(__dirname, 'data', 'stores.json');
 const REQUESTS_FILE = path.join(__dirname, 'data', 'requests.json');
+const REPAIRS_FILE = path.join(__dirname, 'data', 'repairs.json');
 
 // 데이터 읽기 헬퍼 함수
 async function readJSON(filePath) {
@@ -128,7 +129,7 @@ app.post('/api/stores/:id/inventory', async (req, res) => {
     }
     
     const newItem = {
-      id: `item-${Date.now()}`,
+      id: req.body.id || `item-${Date.now()}`,
       ...req.body
     };
     
@@ -156,7 +157,12 @@ app.patch('/api/stores/:storeId/inventory/:itemId', async (req, res) => {
       return res.status(404).json({ error: '재고를 찾을 수 없습니다.' });
     }
     
-    item.quantity = req.body.quantity;
+    // 업데이트 가능한 필드들
+    if (req.body.name !== undefined) item.name = req.body.name;
+    if (req.body.stockQuantity !== undefined) item.stockQuantity = req.body.stockQuantity;
+    if (req.body.displayQuantity !== undefined) item.displayQuantity = req.body.displayQuantity;
+    if (req.body.quantity !== undefined) item.quantity = req.body.quantity;
+    
     await writeJSON(STORES_FILE, data);
     
     res.json(item);
@@ -216,18 +222,23 @@ app.post('/api/requests', async (req, res) => {
       toStoreName: toStore.name,
       item: item,
       quantity: quantity,
-      status: 'requested',
+      requesterName: req.body.requesterName || '사용자',
+      adminName: req.body.adminName || 'admin1',
+      status: req.body.status || 'requested',
+      needsInspection: req.body.needsInspection || false,
+      note: req.body.note || '',
       createdAt: new Date().toISOString(),
       emailSent: false
     };
     
     // 이메일 발송
-    const emailSubject = `[재고 요청] ${fromStore.name}에서 재고를 요청했습니다`;
+    const emailSubject = `[재고 요청] ${toStore.name}에서 재고를 요청했습니다`;
     const emailContent = `
       <h2>재고 요청</h2>
-      <p><strong>요청 매장:</strong> ${fromStore.name}</p>
+      <p><strong>요청 매장:</strong> ${toStore.name}</p>
       <p><strong>상품명:</strong> ${item}</p>
       <p><strong>수량:</strong> ${quantity}개</p>
+      ${newRequest.needsInspection ? '<p><strong>⚠️ 특이사항:</strong> 진열 상품 포함 - 검수 필요</p>' : ''}
       <p><strong>요청 날짜:</strong> ${new Date().toLocaleString('ko-KR')}</p>
       <br>
       <p>앱에서 요청을 승인하거나 거절할 수 있습니다.</p>
@@ -259,22 +270,24 @@ app.get('/api/requests', async (req, res) => {
   }
 });
 
-// 특정 매장의 대기 중 재고 (오는 재고)
+// 특정 매장의 대기 중 재고 (입고 대기 - 내가 요청한 것)
 app.get('/api/requests/incoming/:storeId', async (req, res) => {
   try {
     const data = await readJSON(REQUESTS_FILE);
-    const incoming = data.requests.filter(r => r.fromStoreId === req.params.storeId);
+    // toStoreId가 나인 경우 = 나에게 오는 재고
+    const incoming = data.requests.filter(r => r.toStoreId === req.params.storeId);
     res.json(incoming);
   } catch (error) {
     res.status(500).json({ error: '대기 중 재고를 불러오는데 실패했습니다.' });
   }
 });
 
-// 특정 매장의 준비 중 재고 (가는 재고)
+// 특정 매장의 준비 중 재고 (출고 대기 - 나에게 요청온 것)
 app.get('/api/requests/outgoing/:storeId', async (req, res) => {
   try {
     const data = await readJSON(REQUESTS_FILE);
-    const outgoing = data.requests.filter(r => r.toStoreId === req.params.storeId);
+    // fromStoreId가 나인 경우 = 나에게서 가는 재고
+    const outgoing = data.requests.filter(r => r.fromStoreId === req.params.storeId);
     res.json(outgoing);
   } catch (error) {
     res.status(500).json({ error: '준비 중 재고를 불러오는데 실패했습니다.' });
@@ -284,21 +297,182 @@ app.get('/api/requests/outgoing/:storeId', async (req, res) => {
 // 재고 요청 상태 업데이트
 app.patch('/api/requests/:id', async (req, res) => {
   try {
-    const data = await readJSON(REQUESTS_FILE);
-    const request = data.requests.find(r => r.id === req.params.id);
+    const requestsData = await readJSON(REQUESTS_FILE);
+    const request = requestsData.requests.find(r => r.id === req.params.id);
     
     if (!request) {
       return res.status(404).json({ error: '요청을 찾을 수 없습니다.' });
     }
     
+    const oldStatus = request.status;
     request.status = req.body.status;
     request.updatedAt = new Date().toISOString();
     
-    await writeJSON(REQUESTS_FILE, data);
+    // 상태가 'in_transit'(배송중)로 변경되면 출고 매장(fromStoreId)의 재고 차감
+    if (req.body.status === 'in_transit' && oldStatus !== 'in_transit') {
+      const storesData = await readJSON(STORES_FILE);
+      const store = storesData.stores.find(s => s.id === request.fromStoreId);
+      
+      if (store) {
+        // 재고 아이템 찾기 (item 이름으로 검색)
+        const inventoryItem = store.inventory.find(i => i.id === request.item || `${i.name}_${i.color}` === request.item);
+        
+        if (inventoryItem) {
+          const quantityToDeduct = request.quantity;
+          const totalAvailable = (inventoryItem.stockQuantity || 0) + (inventoryItem.displayQuantity || 0);
+          
+          if (totalAvailable >= quantityToDeduct) {
+            // 진열 수량과 창고 수량에서 랜덤으로 차감
+            const displayAvailable = inventoryItem.displayQuantity || 0;
+            
+            // 진열 수량에서 차감할 개수를 랜덤으로 결정 (0 ~ min(displayAvailable, quantityToDeduct))
+            const maxFromDisplay = Math.min(displayAvailable, quantityToDeduct);
+            const fromDisplay = Math.floor(Math.random() * (maxFromDisplay + 1));
+            const fromStock = quantityToDeduct - fromDisplay;
+            
+            inventoryItem.displayQuantity = Math.max(0, (inventoryItem.displayQuantity || 0) - fromDisplay);
+            inventoryItem.stockQuantity = Math.max(0, (inventoryItem.stockQuantity || 0) - fromStock);
+            
+            await writeJSON(STORES_FILE, storesData);
+            
+            console.log(`✅ 재고 차감 완료 (배송중): ${request.item} (진열 -${fromDisplay}, 창고 -${fromStock})`);
+          } else {
+            console.warn(`⚠️ 재고 부족: ${request.item} (필요: ${quantityToDeduct}, 보유: ${totalAvailable})`);
+          }
+        } else {
+          console.warn(`⚠️ 재고 아이템을 찾을 수 없습니다: ${request.item}`);
+        }
+      }
+    }
+    
+    // 상태가 'completed'(완료)로 변경되면 입고 매장(toStoreId)의 재고 추가
+    if (req.body.status === 'completed' && oldStatus !== 'completed') {
+      const storesData = await readJSON(STORES_FILE);
+      const toStore = storesData.stores.find(s => s.id === request.toStoreId);
+      
+      if (toStore) {
+        // 재고 아이템 찾기 (item 이름으로 검색)
+        let inventoryItem = toStore.inventory.find(i => i.id === request.item || `${i.name}_${i.color}` === request.item);
+        
+        if (inventoryItem) {
+          // 기존 재고가 있으면 창고 수량에 추가
+          inventoryItem.stockQuantity = (inventoryItem.stockQuantity || 0) + request.quantity;
+          console.log(`✅ 재고 추가 완료 (입고): ${request.item} 창고 +${request.quantity}개`);
+        } else {
+          // 재고가 없으면 새로 생성 (출고 매장에서 정보 가져오기)
+          const fromStore = storesData.stores.find(s => s.id === request.fromStoreId);
+          if (fromStore) {
+            const fromItem = fromStore.inventory.find(i => i.id === request.item || `${i.name}_${i.color}` === request.item);
+            if (fromItem) {
+              // 출고 매장의 재고 정보를 복사해서 새로 추가
+              const newItem = {
+                id: fromItem.id,
+                category: fromItem.category,
+                name: fromItem.name,
+                color: fromItem.color,
+                size: fromItem.size,
+                stockQuantity: request.quantity,
+                displayQuantity: 0
+              };
+              toStore.inventory.push(newItem);
+              console.log(`✅ 신규 재고 생성 (입고): ${request.item} 창고 ${request.quantity}개`);
+            }
+          }
+        }
+        
+        await writeJSON(STORES_FILE, storesData);
+      }
+    }
+    
+    await writeJSON(REQUESTS_FILE, requestsData);
     
     res.json(request);
   } catch (error) {
+    console.error('요청 업데이트 실패:', error);
     res.status(500).json({ error: '요청 업데이트에 실패했습니다.' });
+  }
+});
+
+// ============ Repairs API (수선 관리) ============
+
+// 모든 수선 내역 조회
+app.get('/api/repairs', async (req, res) => {
+  try {
+    const data = await readJSON(REPAIRS_FILE);
+    res.json(data.repairs);
+  } catch (error) {
+    res.status(500).json({ error: '수선 내역을 불러오는데 실패했습니다.' });
+  }
+});
+
+// 특정 매장의 수선 내역 조회
+app.get('/api/repairs/store/:storeId', async (req, res) => {
+  try {
+    const data = await readJSON(REPAIRS_FILE);
+    const repairs = data.repairs.filter(r => r.storeId === req.params.storeId);
+    res.json(repairs);
+  } catch (error) {
+    res.status(500).json({ error: '수선 내역을 불러오는데 실패했습니다.' });
+  }
+});
+
+// 수선 내역 추가
+app.post('/api/repairs', async (req, res) => {
+  try {
+    const data = await readJSON(REPAIRS_FILE);
+    
+    const newRepair = {
+      id: `repair-${Date.now()}`,
+      ...req.body,
+      createdAt: new Date().toISOString()
+    };
+    
+    data.repairs.push(newRepair);
+    await writeJSON(REPAIRS_FILE, data);
+    
+    res.json(newRepair);
+  } catch (error) {
+    res.status(500).json({ error: '수선 내역 추가에 실패했습니다.' });
+  }
+});
+
+// 수선 내역 업데이트
+app.patch('/api/repairs/:id', async (req, res) => {
+  try {
+    const data = await readJSON(REPAIRS_FILE);
+    const repair = data.repairs.find(r => r.id === req.params.id);
+    
+    if (!repair) {
+      return res.status(404).json({ error: '수선 내역을 찾을 수 없습니다.' });
+    }
+    
+    Object.assign(repair, req.body);
+    repair.updatedAt = new Date().toISOString();
+    
+    await writeJSON(REPAIRS_FILE, data);
+    
+    res.json(repair);
+  } catch (error) {
+    res.status(500).json({ error: '수선 내역 업데이트에 실패했습니다.' });
+  }
+});
+
+// 수선 내역 삭제
+app.delete('/api/repairs/:id', async (req, res) => {
+  try {
+    const data = await readJSON(REPAIRS_FILE);
+    const index = data.repairs.findIndex(r => r.id === req.params.id);
+    
+    if (index === -1) {
+      return res.status(404).json({ error: '수선 내역을 찾을 수 없습니다.' });
+    }
+    
+    data.repairs.splice(index, 1);
+    await writeJSON(REPAIRS_FILE, data);
+    
+    res.json({ message: '삭제되었습니다.' });
+  } catch (error) {
+    res.status(500).json({ error: '수선 내역 삭제에 실패했습니다.' });
   }
 });
 

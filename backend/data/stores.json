@@ -1,83 +1,184 @@
 {
   "stores": [
     {
-      "id": "store-1",
+      "id": "store-nowon",
+      "name": "노원점",
+      "email": "nowon@s2s-store.com",
+      "inventory": [
+        {
+          "id": "OUTERWEAR_BROWN",
+          "category": "OUTERWEAR",
+          "name": "OUTERWEAR",
+          "color": "BROWN",
+          "size": "M",
+          "stockQuantity": 1,
+          "displayQuantity": 0,
+          "quantity": 5
+        },
+        {
+          "id": "KNITWEAR_BLUE",
+          "category": "KNITWEAR",
+          "name": "KNITWEAR",
+          "color": "BLUE",
+          "size": "L",
+          "stockQuantity": 8,
+          "displayQuantity": 3,
+          "quantity": 5
+        },
+        {
+          "id": "T-SHIRT_WHITE",
+          "category": "T-SHIRT",
+          "name": "T-SHIRT",
+          "color": "WHITE",
+          "size": "M",
+          "stockQuantity": 15,
+          "displayQuantity": 5,
+          "quantity": 4
+        }
+      ]
+    },
+    {
+      "id": "store-gangnam",
       "name": "강남점",
       "email": "gangnam@s2s-store.com",
       "inventory": [
         {
-          "id": "item-1",
-          "name": "청바지",
-          "size": "28인치",
-          "quantity": 15
-        },
-        {
-          "id": "item-2",
-          "name": "청바지",
-          "size": "30인치",
-          "quantity": 12
-        },
-        {
-          "id": "item-3",
-          "name": "티셔츠",
-          "size": "M",
-          "quantity": 20
-        },
-        {
-          "id": "item-4",
-          "name": "청바지",
-          "size": "32인치",
-          "quantity": 8
-        }
-      ]
-    },
-    {
-      "id": "store-2",
-      "name": "신촌점",
-      "email": "sinchon@s2s-store.com",
-      "inventory": [
-        {
-          "id": "item-5",
-          "name": "청바지",
-          "size": "32인치",
-          "quantity": 10
-        },
-        {
-          "id": "item-6",
-          "name": "티셔츠",
+          "id": "OUTERWEAR_BLACK",
+          "category": "OUTERWEAR",
+          "name": "OUTERWEAR",
+          "color": "BLACK",
           "size": "L",
-          "quantity": 18
+          "stockQuantity": 8,
+          "displayQuantity": 4
         },
         {
-          "id": "item-7",
-          "name": "재킷",
-          "size": "M",
-          "quantity": 5
+          "id": "BLOUSE_PINK",
+          "category": "BLOUSE",
+          "name": "BLOUSE",
+          "color": "PINK",
+          "size": "S",
+          "stockQuantity": 7,
+          "displayQuantity": 2
         }
       ]
     },
     {
-      "id": "store-3",
+      "id": "store-hongdae",
       "name": "홍대점",
       "email": "hongdae@s2s-store.com",
       "inventory": [
         {
-          "id": "item-8",
-          "name": "청바지",
-          "size": "32인치",
-          "quantity": 7
+          "id": "DRESS&SKIRT_RED",
+          "category": "DRESS&SKIRT",
+          "name": "DRESS&SKIRT",
+          "color": "RED",
+          "size": "M",
+          "stockQuantity": 6,
+          "displayQuantity": 2
         },
         {
-          "id": "item-9",
-          "name": "티셔츠",
-          "size": "S",
-          "quantity": 25
+          "id": "T-SHIRT_BLACK",
+          "category": "T-SHIRT",
+          "name": "T-SHIRT",
+          "color": "BLACK",
+          "size": "XL",
+          "stockQuantity": 20,
+          "displayQuantity": 8
+        }
+      ]
+    },
+    {
+      "id": "store-jamsil",
+      "name": "잠실점",
+      "email": "jamsil@s2s-store.com",
+      "inventory": [
+        {
+          "id": "ACC_SILVER",
+          "category": "ACC",
+          "name": "ACC",
+          "color": "SILVER",
+          "size": "FREE",
+          "stockQuantity": 16,
+          "displayQuantity": 9,
+          "quantity": 5
         },
         {
-          "id": "item-10",
-          "name": "셔츠",
+          "id": "KNITWEAR_GRAY",
+          "category": "KNITWEAR",
+          "name": "KNITWEAR",
+          "color": "GRAY",
+          "size": "XL",
+          "stockQuantity": 3,
+          "displayQuantity": 0,
+          "quantity": 1
+        }
+      ]
+    },
+    {
+      "id": "store-busan",
+      "name": "부산점",
+      "email": "busan@s2s-store.com",
+      "inventory": [
+        {
+          "id": "OUTERWEAR_NAVY",
+          "category": "OUTERWEAR",
+          "name": "OUTERWEAR",
+          "color": "NAVY",
           "size": "L",
-          "quantity": 10
+          "stockQuantity": 9,
+          "displayQuantity": 3
+        }
+      ]
+    },
+    {
+      "id": "store-daegu",
+      "name": "대구점",
+      "email": "daegu@s2s-store.com",
+      "inventory": [
+        {
+          "id": "BLOUSE_WHITE",
+          "category": "BLOUSE",
+          "name": "BLOUSE",
+          "color": "WHITE",
+          "size": "M",
+          "stockQuantity": 11,
+          "displayQuantity": 4
+        },
+        {
+          "id": "DRESS&SKIRT_BLUE",
+          "category": "DRESS&SKIRT",
+          "name": "DRESS&SKIRT",
+          "color": "BLUE",
+          "size": "S",
+          "stockQuantity": 8,
+          "displayQuantity": 3
+        },
+        {
+          "id": "T-SHIRT_BLUE",
+          "category": "T-SHIRT",
+          "name": "T-SHIRT",
+          "color": "BLUE",
+          "size": "XL",
+          "stockQuantity": 3,
+          "displayQuantity": 2
+        },
+        {
+          "id": "KNITWEAR_LIGHTGRAY",
+          "category": "KNITWEAR",
+          "name": "KNITWEAR",
+          "color": "LIGHTGRAY",
+          "size": "M",
+          "stockQuantity": 8,
+          "displayQuantity": 2
+        },
+        {
+          "id": "PANTS_BROWN",
+          "category": "PANTS",
+          "name": "PANTS",
+          "color": "BROWN",
+          "size": "27",
+          "stockQuantity": 3,
+          "displayQuantity": 3
         }
       ]
     }

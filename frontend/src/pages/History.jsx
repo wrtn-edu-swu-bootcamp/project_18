@@ -1,190 +1,384 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getIncomingRequests, getOutgoingRequests } from '../utils/api';
+import { getStores } from '../utils/api';
+
+const API_BASE = 'http://localhost:3001/api';
 
 export default function History() {
-  const [allRequests, setAllRequests] = useState([]);
-  const [currentStore, setCurrentStore] = useState(null);
-  const [filter, setFilter] = useState('all');
+  const [requests, setRequests] = useState([]);
+  const [myStore, setMyStore] = useState(null);
+  const [allStores, setAllStores] = useState([]);
+  const [viewMode, setViewMode] = useState('sent');
   const navigate = useNavigate();
 
+  // 필터 상태
+  const [filters, setFilters] = useState({
+    storeId: 'all',
+    periodYear: new Date().getFullYear(),
+    periodMonth: new Date().getMonth() + 1,
+    productName: '',
+    quantityCondition: 'all',
+    quantityValue: ''
+  });
+
   useEffect(() => {
-    const stored = localStorage.getItem('currentStore');
-    if (stored) {
-      const store = JSON.parse(stored);
-      setCurrentStore(store);
-      loadHistory(store.id);
-    } else {
-      navigate('/');
+    async function initializeHistory() {
+      const storedName = localStorage.getItem('myStore');
+      if (!storedName) {
+        navigate('/');
+        return;
+      }
+      
+      try {
+        const stores = await getStores();
+        const store = stores.find(s => s.name === storedName);
+        
+        if (!store) {
+          navigate('/');
+          return;
+        }
+        
+        setMyStore(store);
+        setAllStores(stores);
+        loadRequests(store.id);
+      } catch (error) {
+        console.error('매장 정보 로드 실패:', error);
+        navigate('/');
+      }
     }
+    
+    initializeHistory();
   }, [navigate]);
 
-  async function loadHistory(storeId) {
+  async function loadRequests(storeId) {
     try {
-      const [incoming, outgoing] = await Promise.all([
-        getIncomingRequests(storeId),
-        getOutgoingRequests(storeId)
+      const [sentRes, receivedRes] = await Promise.all([
+        fetch(`${API_BASE}/requests/incoming/${storeId}`),  // 요청한 거래 (toStoreId === myStore)
+        fetch(`${API_BASE}/requests/outgoing/${storeId}`)   // 받은 요청 (fromStoreId === myStore)
       ]);
       
-      const combined = [
-        ...incoming.map(r => ({...r, type: 'incoming'})),
-        ...outgoing.map(r => ({...r, type: 'outgoing'}))
-      ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      const sent = await sentRes.json();
+      const received = await receivedRes.json();
       
-      setAllRequests(combined);
+      setRequests({ sent, received });
     } catch (error) {
       console.error('거래 내역 불러오기 실패:', error);
+      setRequests({ sent: [], received: [] });
     }
   }
 
-  const filteredRequests = filter === 'all'
-    ? allRequests
-    : allRequests.filter(r => r.type === filter);
+  function resetFilters() {
+    setFilters({
+      storeId: 'all',
+      periodYear: new Date().getFullYear(),
+      periodMonth: new Date().getMonth() + 1,
+      productName: '',
+      quantityCondition: 'all',
+      quantityValue: ''
+    });
+  }
 
-  const getStatusInfo = (status) => {
-    const statusMap = {
-      requested: { label: '요청됨', color: 'bg-yellow-100 text-yellow-800' },
-      approved: { label: '승인됨', color: 'bg-blue-100 text-blue-800' },
-      in_transit: { label: '배송 중', color: 'bg-purple-100 text-purple-800' },
-      completed: { label: '완료', color: 'bg-green-100 text-green-800' },
-      rejected: { label: '거절됨', color: 'bg-red-100 text-red-800' }
+  const currentRequests = viewMode === 'sent' ? requests.sent : requests.received;
+
+  const filteredRequests = (currentRequests || []).filter(request => {
+    // 매장 필터
+    if (filters.storeId !== 'all') {
+      const targetStoreId = viewMode === 'sent' ? request.fromStoreId : request.toStoreId;
+      if (targetStoreId !== filters.storeId) return false;
+    }
+
+    // 기간 필터
+    const requestDate = new Date(request.createdAt);
+    if (requestDate.getFullYear() !== filters.periodYear || 
+        requestDate.getMonth() + 1 !== filters.periodMonth) {
+      return false;
+    }
+
+    // 제품명 필터
+    if (filters.productName && !request.item.toLowerCase().includes(filters.productName.toLowerCase())) {
+      return false;
+    }
+
+    // 수량 조건 필터
+    if (filters.quantityCondition !== 'all' && filters.quantityValue) {
+      const qty = parseInt(filters.quantityValue);
+      if (filters.quantityCondition === 'gte' && request.quantity < qty) return false;
+      if (filters.quantityCondition === 'lte' && request.quantity > qty) return false;
+    }
+
+    return true;
+  });
+
+  const sortedRequests = [...filteredRequests].sort((a, b) => 
+    new Date(b.createdAt) - new Date(a.createdAt)
+  );
+
+  const getStatusColor = (status) => {
+    const colors = {
+      'requested': { bg: '#f3f4f6', text: '#6b7280' },
+      'approved': { bg: '#dbeafe', text: '#1e40af' },
+      'in_transit': { bg: '#fed7aa', text: '#9a3412' },
+      'completed': { bg: '#d1fae5', text: '#065f46' }
     };
-    return statusMap[status] || statusMap.requested;
+    return colors[status] || colors['requested'];
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* 헤더 */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center mb-4">
-            <button
-              onClick={() => navigate('/')}
-              className="mr-4 text-gray-600 hover:text-gray-900"
-            >
-              ← 뒤로
-            </button>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">거래 내역</h1>
-              <p className="text-sm text-gray-600">{currentStore?.name}</p>
-            </div>
-          </div>
+  const getStatusLabel = (status) => {
+    const labels = {
+      'requested': '요청됨',
+      'approved': '승인됨',
+      'in_transit': '배송중',
+      'completed': '완료'
+    };
+    return labels[status] || status;
+  };
 
-          {/* 필터 */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => setFilter('all')}
-              className={`px-4 py-2 rounded-lg font-medium ${
-                filter === 'all'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              전체
-            </button>
-            <button
-              onClick={() => setFilter('incoming')}
-              className={`px-4 py-2 rounded-lg font-medium ${
-                filter === 'incoming'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              요청한 거래
-            </button>
-            <button
-              onClick={() => setFilter('outgoing')}
-              className={`px-4 py-2 rounded-lg font-medium ${
-                filter === 'outgoing'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              받은 요청
-            </button>
+  // 연도 옵션 (최근 3년)
+  const yearOptions = Array.from({ length: 3 }, (_, i) => new Date().getFullYear() - i);
+  const monthOptions = Array.from({ length: 12 }, (_, i) => i + 1);
+
+  return (
+    <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
+      {/* 헤더 */}
+      <div style={{ backgroundColor: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+        <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '1rem', display: 'flex', alignItems: 'center' }}>
+          <button
+            onClick={() => navigate('/home')}
+            style={{ marginRight: '1rem', color: '#6b7280', background: 'none', border: 'none', fontSize: '1rem', cursor: 'pointer' }}
+          >
+            ← 뒤로
+          </button>
+          <div>
+            <h1 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#111827' }}>📊 거래 내역</h1>
+            <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>{myStore?.name}</p>
           </div>
         </div>
       </div>
 
-      {/* 타임라인 */}
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        {filteredRequests.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg mb-2">📭</p>
-            <p className="text-gray-500">거래 내역이 없습니다.</p>
+      <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '1.5rem 1rem' }}>
+        {/* 필터 영역 */}
+        <div style={{ backgroundColor: 'white', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', padding: '1.5rem', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827' }}>🔍 검색 필터</h2>
+            <button
+              onClick={resetFilters}
+              style={{
+                backgroundColor: '#e5e7eb',
+                color: '#374151',
+                padding: '0.5rem 1rem',
+                borderRadius: '0.5rem',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '500'
+              }}
+            >
+              초기화
+            </button>
           </div>
-        ) : (
-          <div className="relative">
-            {/* 타임라인 선 */}
-            <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200"></div>
 
-            {/* 거래 목록 */}
-            <div className="space-y-6">
-              {filteredRequests.map((request, index) => {
-                const statusInfo = getStatusInfo(request.status);
-                const isIncoming = request.type === 'incoming';
-                
-                return (
-                  <div key={request.id} className="relative flex gap-4">
-                    {/* 타임라인 아이콘 */}
-                    <div className={`flex-shrink-0 w-16 h-16 rounded-full ${
-                      isIncoming ? 'bg-yellow-100' : 'bg-blue-100'
-                    } border-4 border-white shadow-sm flex items-center justify-center text-2xl z-10`}>
-                      {isIncoming ? '📥' : '📤'}
-                    </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+            {/* 거래 매장 */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem', color: '#374151' }}>
+                거래 매장
+              </label>
+              <select
+                value={filters.storeId}
+                onChange={(e) => setFilters({...filters, storeId: e.target.value})}
+                style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+              >
+                <option value="all">전체</option>
+                {allStores.filter(s => s.id !== myStore?.id).map(store => (
+                  <option key={store.id} value={store.id}>{store.name}</option>
+                ))}
+              </select>
+            </div>
 
-                    {/* 거래 카드 */}
-                    <div className="flex-1 bg-white rounded-lg shadow-sm p-6">
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${
-                              isIncoming ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'
-                            }`}>
-                              {isIncoming ? '요청한 거래' : '받은 요청'}
-                            </span>
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${statusInfo.color}`}>
-                              {statusInfo.label}
-                            </span>
-                          </div>
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            {request.item}
-                          </h3>
-                        </div>
-                        <span className="text-2xl font-bold text-gray-900">
-                          {request.quantity}개
-                        </span>
-                      </div>
+            {/* 거래 기간 (연도) */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem', color: '#374151' }}>
+                거래 연도
+              </label>
+              <select
+                value={filters.periodYear}
+                onChange={(e) => setFilters({...filters, periodYear: parseInt(e.target.value)})}
+                style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+              >
+                {yearOptions.map(year => (
+                  <option key={year} value={year}>{year}년</option>
+                ))}
+              </select>
+            </div>
 
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <p className="text-gray-500">
-                            {isIncoming ? '요청한 매장' : '요청 매장'}
-                          </p>
-                          <p className="font-medium text-gray-900">
-                            {isIncoming ? request.toStoreName : request.fromStoreName}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">요청 날짜</p>
-                          <p className="font-medium text-gray-900">
-                            {new Date(request.createdAt).toLocaleDateString('ko-KR')}
-                          </p>
-                        </div>
-                      </div>
+            {/* 거래 기간 (월) */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem', color: '#374151' }}>
+                거래 월
+              </label>
+              <select
+                value={filters.periodMonth}
+                onChange={(e) => setFilters({...filters, periodMonth: parseInt(e.target.value)})}
+                style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+              >
+                {monthOptions.map(month => (
+                  <option key={month} value={month}>{month}월</option>
+                ))}
+              </select>
+            </div>
 
-                      {request.updatedAt && (
-                        <p className="text-xs text-gray-500 mt-3">
-                          마지막 업데이트: {new Date(request.updatedAt).toLocaleString('ko-KR')}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+            {/* 제품명 */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem', color: '#374151' }}>
+                제품명
+              </label>
+              <input
+                type="text"
+                placeholder="제품명 검색"
+                value={filters.productName}
+                onChange={(e) => setFilters({...filters, productName: e.target.value})}
+                style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+              />
+            </div>
+
+            {/* 수량 조건 */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem', color: '#374151' }}>
+                수량 조건
+              </label>
+              <select
+                value={filters.quantityCondition}
+                onChange={(e) => setFilters({...filters, quantityCondition: e.target.value})}
+                style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+              >
+                <option value="all">전체</option>
+                <option value="gte">이상 (≥)</option>
+                <option value="lte">이하 (≤)</option>
+              </select>
+            </div>
+
+            {/* 수량 값 */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem', color: '#374151' }}>
+                수량
+              </label>
+              <input
+                type="number"
+                placeholder="수량"
+                value={filters.quantityValue}
+                onChange={(e) => setFilters({...filters, quantityValue: e.target.value})}
+                disabled={filters.quantityCondition === 'all'}
+                style={{ 
+                  width: '100%', 
+                  padding: '0.5rem', 
+                  border: '1px solid #d1d5db', 
+                  borderRadius: '0.5rem', 
+                  fontSize: '0.875rem',
+                  opacity: filters.quantityCondition === 'all' ? 0.5 : 1
+                }}
+              />
             </div>
           </div>
-        )}
+        </div>
+
+        {/* 보기 모드 토글 */}
+        <div style={{ backgroundColor: 'white', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '1.5rem', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', borderBottom: '2px solid #e5e7eb' }}>
+            <button
+              onClick={() => setViewMode('sent')}
+              style={{
+                flex: 1,
+                padding: '1rem',
+                border: 'none',
+                backgroundColor: viewMode === 'sent' ? '#eff6ff' : 'transparent',
+                color: viewMode === 'sent' ? '#1e40af' : '#6b7280',
+                fontWeight: viewMode === 'sent' ? '600' : '400',
+                cursor: 'pointer',
+                borderBottom: viewMode === 'sent' ? '3px solid #3b82f6' : 'none'
+              }}
+            >
+              요청한 거래 ({requests.sent?.length || 0})
+            </button>
+            <button
+              onClick={() => setViewMode('received')}
+              style={{
+                flex: 1,
+                padding: '1rem',
+                border: 'none',
+                backgroundColor: viewMode === 'received' ? '#eff6ff' : 'transparent',
+                color: viewMode === 'received' ? '#1e40af' : '#6b7280',
+                fontWeight: viewMode === 'received' ? '600' : '400',
+                cursor: 'pointer',
+                borderBottom: viewMode === 'received' ? '3px solid #3b82f6' : 'none'
+              }}
+            >
+              받은 요청 ({requests.received?.length || 0})
+            </button>
+          </div>
+        </div>
+
+        {/* 거래 내역 카드 */}
+        <div style={{ display: 'grid', gap: '1rem' }}>
+          {sortedRequests.length === 0 ? (
+            <div style={{ backgroundColor: 'white', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', padding: '3rem', textAlign: 'center', color: '#6b7280' }}>
+              필터 조건에 맞는 거래 내역이 없습니다.
+            </div>
+          ) : (
+            sortedRequests.map((request) => (
+              <div key={request.id} style={{ backgroundColor: 'white', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', padding: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', marginBottom: '0.25rem', fontFamily: 'monospace' }}>
+                      {request.item}
+                    </h3>
+                    <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                      {viewMode === 'sent' ? `받을 매장: ${request.fromStoreName}` : `보낼 매장: ${request.toStoreName}`}
+                    </p>
+                  </div>
+                  <div style={{
+                    padding: '0.5rem 1rem',
+                    borderRadius: '0.5rem',
+                    backgroundColor: getStatusColor(request.status).bg,
+                    color: getStatusColor(request.status).text,
+                    fontSize: '0.875rem',
+                    fontWeight: '600'
+                  }}>
+                    {getStatusLabel(request.status)}
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+                  <div>
+                    <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>수량</p>
+                    <p style={{ fontSize: '1rem', fontWeight: '600', color: '#111827' }}>{request.quantity}개</p>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>요청자</p>
+                    <p style={{ fontSize: '1rem', fontWeight: '600', color: '#111827' }}>{request.requesterName}</p>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>거래일시</p>
+                    <p style={{ fontSize: '0.875rem', fontWeight: '500', color: '#111827' }}>
+                      {new Date(request.createdAt).toLocaleString('ko-KR', { 
+                        year: 'numeric',
+                        month: '2-digit', 
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                </div>
+
+                {request.emailSent && (
+                  <div style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: '500' }}>
+                    ✉️ 메일 전송 완료
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

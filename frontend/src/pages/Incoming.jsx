@@ -1,140 +1,284 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getIncomingRequests } from '../utils/api';
+import { getStores } from '../utils/api';
+
+const API_BASE = 'http://localhost:3001/api';
+
+const STATUS_LABELS = {
+  'requested': '요청됨',
+  'approved': '승인됨',
+  'in_transit': '배송중',
+  'completed': '완료'
+};
+
+const STATUS_COLORS = {
+  'requested': { bg: '#f3f4f6', text: '#6b7280', border: '#d1d5db' },
+  'approved': { bg: '#dbeafe', text: '#1e40af', border: '#3b82f6' },
+  'in_transit': { bg: '#fed7aa', text: '#9a3412', border: '#f97316' },
+  'completed': { bg: '#d1fae5', text: '#065f46', border: '#10b981' }
+};
 
 export default function Incoming() {
   const [requests, setRequests] = useState([]);
   const [currentStore, setCurrentStore] = useState(null);
-  const [filter, setFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('date-desc');
   const navigate = useNavigate();
 
   useEffect(() => {
-    const stored = localStorage.getItem('currentStore');
-    if (stored) {
-      const store = JSON.parse(stored);
-      setCurrentStore(store);
-      loadRequests(store.id);
-    } else {
-      navigate('/');
+    async function initializeStore() {
+      const storedName = localStorage.getItem('currentStore');
+      if (!storedName) {
+        navigate('/');
+        return;
+      }
+      
+      try {
+        const stores = await getStores();
+        const store = stores.find(s => s.name === storedName);
+        
+        if (!store) {
+          navigate('/');
+          return;
+        }
+        
+        setCurrentStore(store);
+        loadRequests(store.id);
+      } catch (error) {
+        console.error('매장 정보 로드 실패:', error);
+        navigate('/');
+      }
     }
+    
+    initializeStore();
   }, [navigate]);
 
   async function loadRequests(storeId) {
     try {
-      const data = await getIncomingRequests(storeId);
+      const response = await fetch(`${API_BASE}/requests/incoming/${storeId}`);
+      const data = await response.json();
       setRequests(data);
     } catch (error) {
-      console.error('대기 중 재고 불러오기 실패:', error);
+      console.error('입고 요청 불러오기 실패:', error);
     }
   }
 
-  const filteredRequests = filter === 'all'
-    ? requests
-    : requests.filter(r => r.status === filter);
+  async function handleComplete(requestId) {
+    try {
+      const response = await fetch(`${API_BASE}/requests/${requestId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'completed' })
+      });
+      
+      if (response.ok) {
+        await loadRequests(currentStore.id);
+      }
+    } catch (error) {
+      console.error('요청 완료 처리 실패:', error);
+    }
+  }
 
-  const getStatusInfo = (status) => {
-    const statusMap = {
-      requested: { label: '요청됨', color: 'bg-yellow-100 text-yellow-800', icon: '📤' },
-      approved: { label: '승인됨', color: 'bg-blue-100 text-blue-800', icon: '✅' },
-      in_transit: { label: '배송 중', color: 'bg-purple-100 text-purple-800', icon: '🚚' },
-      completed: { label: '완료', color: 'bg-green-100 text-green-800', icon: '✨' },
-      rejected: { label: '거절됨', color: 'bg-red-100 text-red-800', icon: '❌' }
-    };
-    return statusMap[status] || statusMap.requested;
-  };
+  const filteredRequests = statusFilter === 'all'
+    ? requests
+    : requests.filter(r => r.status === statusFilter);
+
+  const sortedRequests = [...filteredRequests].sort((a, b) => {
+    if (sortBy === 'date-desc') {
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    } else if (sortBy === 'date-asc') {
+      return new Date(a.createdAt) - new Date(b.createdAt);
+    }
+    return 0;
+  });
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
       {/* 헤더 */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center mb-4">
+      <div style={{ backgroundColor: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+        <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
             <button
-              onClick={() => navigate('/')}
-              className="mr-4 text-gray-600 hover:text-gray-900"
+              onClick={() => navigate('/home')}
+              style={{ marginRight: '1rem', color: '#6b7280', background: 'none', border: 'none', fontSize: '1rem', cursor: 'pointer' }}
             >
               ← 뒤로
             </button>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">대기 중 재고 (오는 재고)</h1>
-              <p className="text-sm text-gray-600">{currentStore?.name}</p>
+              <h1 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#111827' }}>📨 입고 대기</h1>
+              <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>{currentStore?.name} - 다른 매장에 요청한 재고</p>
             </div>
-          </div>
-
-          {/* 필터 */}
-          <div className="flex gap-2 overflow-x-auto">
-            {[
-              { value: 'all', label: '전체' },
-              { value: 'requested', label: '요청됨' },
-              { value: 'approved', label: '승인됨' },
-              { value: 'in_transit', label: '배송 중' },
-              { value: 'completed', label: '완료' }
-            ].map(({ value, label }) => (
-              <button
-                key={value}
-                onClick={() => setFilter(value)}
-                className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${
-                  filter === value
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
           </div>
         </div>
       </div>
 
-      {/* 재고 목록 */}
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        {filteredRequests.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg mb-2">📭</p>
-            <p className="text-gray-500">
-              {filter === 'all' 
-                ? '대기 중인 재고가 없습니다.'
-                : `"${getStatusInfo(filter).label}" 상태의 재고가 없습니다.`
-              }
-            </p>
+      <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '1.5rem 1rem' }}>
+        {/* 필터 및 정렬 */}
+        <div style={{ backgroundColor: 'white', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', padding: '1rem', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => setStatusFilter('all')}
+                style={{
+                  padding: '0.5rem 1rem',
+                  borderRadius: '0.5rem',
+                  border: 'none',
+                  backgroundColor: statusFilter === 'all' ? '#3b82f6' : '#f3f4f6',
+                  color: statusFilter === 'all' ? 'white' : '#374151',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem'
+                }}
+              >
+                전체 ({requests.length})
+              </button>
+              {Object.entries(STATUS_LABELS).map(([status, label]) => (
+                <button
+                  key={status}
+                  onClick={() => setStatusFilter(status)}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    borderRadius: '0.5rem',
+                    border: 'none',
+                    backgroundColor: statusFilter === status ? STATUS_COLORS[status].bg : '#f3f4f6',
+                    color: statusFilter === status ? STATUS_COLORS[status].text : '#374151',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem'
+                  }}
+                >
+                  {label} ({requests.filter(r => r.status === status).length})
+                </button>
+              ))}
+            </div>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              style={{
+                padding: '0.5rem 1rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '0.5rem',
+                backgroundColor: 'white',
+                cursor: 'pointer',
+                fontSize: '0.875rem'
+              }}
+            >
+              <option value="date-desc">최신순</option>
+              <option value="date-asc">오래된순</option>
+            </select>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {filteredRequests.map((request) => {
-              const statusInfo = getStatusInfo(request.status);
-              return (
-                <div key={request.id} className="bg-white rounded-lg shadow-sm p-6">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-2xl">{statusInfo.icon}</span>
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusInfo.color}`}>
-                          {statusInfo.label}
-                        </span>
-                        {request.emailSent && (
-                          <span className="text-xs text-gray-500">✉️ 메일 발송됨</span>
-                        )}
-                      </div>
-                      
-                      <h3 className="text-lg font-semibold text-gray-900 mb-1">
+        </div>
+
+        {/* 요청 목록 테이블 */}
+        <div style={{ backgroundColor: 'white', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead style={{ backgroundColor: '#f3f4f6' }}>
+                <tr>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>제품명</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>수량</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>요청 매장</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>요청일</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>요청자</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>특이사항</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>상태</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>완료</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedRequests.length === 0 ? (
+                  <tr>
+                    <td colSpan="8" style={{ padding: '3rem', textAlign: 'center', color: '#6b7280' }}>
+                      {statusFilter === 'all' ? '입고 요청 내역이 없습니다.' : `${STATUS_LABELS[statusFilter]} 상태의 요청이 없습니다.`}
+                    </td>
+                  </tr>
+                ) : (
+                  sortedRequests.map((request) => (
+                    <tr key={request.id} style={{ borderTop: '1px solid #e5e7eb' }}>
+                      <td style={{ padding: '0.75rem', fontSize: '0.875rem', fontFamily: 'monospace', fontWeight: '500' }}>
                         {request.item}
-                      </h3>
-                      
-                      <div className="space-y-1 text-sm text-gray-600">
-                        <p>수량: <span className="font-semibold text-gray-900">{request.quantity}개</span></p>
-                        <p>요청한 매장: <span className="font-semibold">{request.toStoreName}</span></p>
-                        <p>요청 날짜: {new Date(request.createdAt).toLocaleString('ko-KR')}</p>
-                        {request.updatedAt && (
-                          <p>업데이트: {new Date(request.updatedAt).toLocaleString('ko-KR')}</p>
+                      </td>
+                      <td style={{ padding: '0.75rem', fontSize: '0.875rem', textAlign: 'center', fontWeight: 'bold' }}>
+                        {request.quantity}개
+                      </td>
+                      <td style={{ padding: '0.75rem', fontSize: '0.875rem' }}>
+                        {request.fromStoreName}
+                      </td>
+                      <td style={{ padding: '0.75rem', fontSize: '0.875rem', textAlign: 'center', color: '#6b7280' }}>
+                        {new Date(request.createdAt).toLocaleString('ko-KR', { 
+                          year: 'numeric', 
+                          month: '2-digit', 
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </td>
+                      <td style={{ padding: '0.75rem', fontSize: '0.875rem' }}>
+                        {request.requesterName}
+                      </td>
+                      <td style={{ padding: '0.75rem', fontSize: '0.75rem', color: '#6b7280' }}>
+                        {request.needsInspection ? (
+                          <span style={{ 
+                            backgroundColor: '#fef3c7', 
+                            color: '#92400e', 
+                            padding: '0.25rem 0.5rem', 
+                            borderRadius: '0.25rem',
+                            fontWeight: '500'
+                          }}>
+                            🧼 검수 필요
+                          </span>
+                        ) : (
+                          '-'
                         )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+                      </td>
+                      <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '0.25rem 0.75rem',
+                          borderRadius: '0.375rem',
+                          fontSize: '0.875rem',
+                          fontWeight: '500',
+                          backgroundColor: STATUS_COLORS[request.status].bg,
+                          color: STATUS_COLORS[request.status].text,
+                          border: `1px solid ${STATUS_COLORS[request.status].border}`
+                        }}>
+                          {STATUS_LABELS[request.status]}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                        {request.status === 'in_transit' ? (
+                          <button
+                            onClick={() => {
+                              if (window.confirm('이 요청을 완료 처리하시겠습니까?')) {
+                                handleComplete(request.id);
+                              }
+                            }}
+                            style={{
+                              backgroundColor: '#10b981',
+                              color: 'white',
+                              padding: '0.375rem 0.75rem',
+                              borderRadius: '0.375rem',
+                              border: 'none',
+                              cursor: 'pointer',
+                              fontSize: '0.75rem',
+                              fontWeight: '500'
+                            }}
+                          >
+                            완료
+                          </button>
+                        ) : request.status === 'completed' ? (
+                          <span style={{ color: '#10b981', fontSize: '0.875rem', fontWeight: '600' }}>✓</span>
+                        ) : (
+                          <span style={{ color: '#9ca3af', fontSize: '0.875rem' }}>-</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

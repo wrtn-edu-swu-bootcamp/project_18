@@ -43,6 +43,17 @@ export async function updateInventoryQuantity(storeId, itemId, quantity) {
   return response.json();
 }
 
+// 재고 아이템 업데이트 (이름, 보유 수량, 진열 수량 등)
+export async function updateInventoryItem(storeId, itemId, updates) {
+  const response = await fetch(`${API_BASE_URL}/stores/${storeId}/inventory/${itemId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates)
+  });
+  if (!response.ok) throw new Error('Failed to update inventory item');
+  return response.json();
+}
+
 // 재고 검색
 export async function searchInventory(keyword) {
   const response = await fetch(`${API_BASE_URL}/inventory/search`, {
