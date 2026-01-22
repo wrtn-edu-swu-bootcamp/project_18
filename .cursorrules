@@ -1,0 +1,141 @@
+# S2S 재고 관리 시스템 - Cursor Rules
+
+## 프로젝트 개요
+- **프로젝트명**: S2S (Store to Store) 재고 관리 시스템
+- **목적**: 매장 간 재고 이동 및 수선 관리 웹 애플리케이션
+- **문서**: `docs/Wireframe.md`, `docs/Design-Guide.md`, `docs/Code-Architecture.md` 참조 필수
+
+## 기술 스택
+- **Frontend**: React 18.x, React Router 6.x, Vite 5.x
+- **Backend**: Node.js 18+, Express.js 4.x, Nodemailer 6.x
+- **데이터**: JSON 파일 기반 (stores.json, requests.json, repairs.json)
+- **인증**: localStorage 기반 (간소화된 인증)
+
+## 디렉토리 구조 규칙
+```
+frontend/src/
+  ├── pages/          # 페이지 컴포넌트 (각 라우트별 1개 파일)
+  ├── utils/          # API 호출 함수, 유틸리티
+  └── assets/         # 정적 리소스
+
+backend/
+  ├── data/           # JSON 데이터 파일
+  └── server.js       # Express 서버 및 API 라우트
+```
+
+## 코딩 스타일
+
+### React 컴포넌트
+- 함수형 컴포넌트만 사용
+- `useState`, `useEffect` 훅 사용
+- 인라인 스타일 객체 사용 (Tailwind 대신)
+- 컴포넌트명은 PascalCase
+- 파일명은 컴포넌트명과 동일 (예: `Home.jsx`)
+
+### 스타일링
+- 인라인 스타일 객체 사용: `style={{ ... }}`
+- 컬러는 Design-Guide.md의 HEX 값 사용
+- 간격 단위: rem 기반 (0.25rem = 4px)
+- 반응형: `gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))'`
+
+### API 호출
+- `utils/api.js`의 함수 사용
+- API_BASE: `http://localhost:3001/api`
+- 에러 처리: try-catch + alert 또는 console.error
+- 병렬 요청: `Promise.all()` 사용
+
+### 상태 관리
+- 컴포넌트 로컬 상태: `useState`
+- 인증 정보: `localStorage` (myStore, currentStore, adminName, adminEmail)
+- 페이지 로드 시 localStorage 확인 후 인증 없으면 `/`로 리다이렉트
+
+### 네비게이션
+- React Router의 `useNavigate()` 사용
+- 프로그래매틱 네비게이션: `navigate('/path')`
+- 상태 전달: `navigate('/path', { state: { ... } })`
+
+## 아키텍처 패턴
+
+### 페이지 컴포넌트 구조
+```javascript
+export default function PageName() {
+  const [data, setData] = useState([]);
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    // localStorage 인증 확인
+    // 데이터 로드
+  }, []);
+  
+  // 핸들러 함수들
+  // 렌더링
+}
+```
+
+### API 라우트 패턴
+- RESTful 엔드포인트: `/api/resource/:id`
+- 에러 응답: `res.status(404).json({ error: '...' })`
+- 성공 응답: `res.json(data)`
+- 데이터 읽기/쓰기: `readJSON()`, `writeJSON()` 헬퍼 함수 사용
+
+### 데이터 모델
+- stores.json: 매장 정보 및 재고
+- requests.json: 재고 요청 (상태: requested → approved → in_transit → completed)
+- repairs.json: 수선 내역 (상태: 수선 전 → 수선 중 → 수선 완료)
+
+## 디자인 시스템
+
+### 컬러 사용
+- Primary: `#3b82f6` (Blue 500)
+- 상태별 컬러는 Design-Guide.md의 STATUS_COLORS, REPAIR_COLORS 참조
+- 긴급도 표시: 배경색 + 테두리색 조합
+
+### 컴포넌트 스타일
+- 카드: `backgroundColor: 'white'`, `borderRadius: '0.5rem'`, `boxShadow: '0 1px 3px rgba(0,0,0,0.1)'`
+- 버튼: Primary `#3b82f6`, Secondary `#e5e7eb`
+- 입력 필드: `border: '2px solid #e5e7eb'`, focus 시 `#3b82f6`
+- 테이블: 헤더 `backgroundColor: '#f3f4f6'`
+
+### 아이콘
+- 이모지 사용 (🏪, 📦, 🧵, 📨, 📤, 👥, 📧, 📊, 📋)
+- 페이지별 고유 아이콘 사용
+
+## 비즈니스 로직
+
+### 재고 요청 흐름
+1. 요청 생성 → `status: 'requested'`
+2. 승인 → `status: 'approved'`
+3. 배송 시작 → `status: 'in_transit'` (재고 자동 차감)
+4. 완료 → `status: 'completed'` (입고 매장 재고 추가)
+
+### 수선 흐름
+1. 등록 → `repairStatus: '수선 전'`
+2. 수선 보내기 → `repairStatus: '수선 중'`, `sentAt` 기록, `estimatedMinutes` 설정
+3. 자동 완료 → `estimatedMinutes` 경과 시 `repairStatus: '수선 완료'`
+4. 알림톡 발송 → `notificationSent: true`
+5. 전달 완료 → `delivered: true` (결제 완료 시만 가능)
+
+## 파일 생성 규칙
+
+### 새 페이지 추가 시
+1. `frontend/src/pages/PageName.jsx` 생성
+2. `App.jsx`에 라우트 추가: `<Route path="/path" element={<PageName />} />`
+3. localStorage 인증 확인 로직 포함
+4. Design-Guide.md의 스타일 가이드 준수
+
+### 새 API 엔드포인트 추가 시
+1. `backend/server.js`에 라우트 추가
+2. 에러 처리 포함
+3. JSON 파일 읽기/쓰기 시 `readJSON()`, `writeJSON()` 사용
+
+## 주의사항
+- 절대 경로 사용 금지 (상대 경로만 사용)
+- 하드코딩된 값 최소화 (상수로 분리)
+- 에러 처리 필수 (try-catch, 상태 코드)
+- 인증 없는 페이지 접근 시 `/`로 리다이렉트
+- API 호출 실패 시 사용자에게 알림 (alert 또는 UI 표시)
+
+## 참조 문서
+- UI 구조: `docs/Wireframe.md`
+- 디자인 시스템: `docs/Design-Guide.md`
+- 아키텍처: `docs/Code-Architecture.md`
