@@ -58,6 +58,7 @@ export default function Home() {
       setStores(data);
     } catch (error) {
       console.error('매장 불러오기 실패:', error);
+      alert(`⚠️ 백엔드 서버에 연결할 수 없습니다.\n\n에러: ${error.message}\n\nVercel 환경 변수에 VITE_API_BASE_URL이 설정되어 있는지 확인해주세요.`);
     }
   }
 
