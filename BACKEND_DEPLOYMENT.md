@@ -23,12 +23,22 @@
 Railway 대시보드에서:
 
 1. 프로젝트 선택 → **Variables** 탭
-2. 다음 환경 변수 추가:
+2. **"New Variable"** 클릭하여 각각 추가:
 
-```
-EMAIL_USER=nivuss128@gmail.com
-EMAIL_PASS=hkoo mlsd mhmw vswx
-```
+**첫 번째 변수:**
+- **Key**: `EMAIL_USER` (공백 없이!)
+- **Value**: `nivuss128@gmail.com`
+- "Add" 클릭
+
+**두 번째 변수:**
+- **Key**: `EMAIL_PASS` (공백 없이!)
+- **Value**: `hkoo mlsd mhmw vswx` (값에 공백 있어도 됨)
+- "Add" 클릭
+
+**⚠️ 주의사항:**
+- 키 이름에는 공백, 특수문자(_, -, . 제외) 사용 불가
+- 키는 숫자로 시작할 수 없음
+- 값에는 공백 포함 가능
 
 **참고:** Railway는 자동으로 `PORT` 환경 변수를 제공하므로 설정할 필요 없습니다.
 

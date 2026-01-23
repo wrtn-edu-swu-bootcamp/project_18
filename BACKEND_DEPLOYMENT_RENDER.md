@@ -28,10 +28,24 @@ Render는 Railway보다 더 간단하고 무료 플랜이 좋습니다!
 
 **Environment Variables** 섹션에서:
 
-```
-EMAIL_USER = nivuss128@gmail.com
-EMAIL_PASS = hkoo mlsd mhmw vswx
-```
+⚠️ **주의**: 키와 값은 각각 별도의 입력 필드에 입력하세요!
+
+1. **첫 번째 환경 변수 추가:**
+   - **Key**: `EMAIL_USER` (공백 없이!)
+   - **Value**: `nivuss128@gmail.com`
+   - "Add" 클릭
+
+2. **두 번째 환경 변수 추가:**
+   - **Key**: `EMAIL_PASS` (공백 없이!)
+   - **Value**: `hkoo mlsd mhmw vswx` (공백 포함 가능, 값에는 문제 없음)
+   - "Add" 클릭
+
+**올바른 형식:**
+- ✅ `EMAIL_USER` (대문자, 언더스코어 사용 가능)
+- ✅ `EMAIL_PASS`
+- ❌ `EMAIL USER` (공백 불가)
+- ❌ `email-user` (하이픈은 가능하지만 대문자 권장)
+- ❌ `123EMAIL` (숫자로 시작 불가)
 
 ### 4단계: 배포
 
