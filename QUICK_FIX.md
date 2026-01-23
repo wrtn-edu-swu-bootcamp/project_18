@@ -31,25 +31,33 @@
    ```
    예상 응답: `{"status":"OK","message":"S2S Backend is running"}`
 
-### 2단계: Vercel 환경 변수 설정
+### 2단계: Vercel 환경 변수 설정 (중요!)
 
-백엔드가 정상 작동하는 것을 확인한 후:
+⚠️ **현재 에러 원인**: 환경 변수에 잘못된 URL이 설정되어 있습니다!
+
+**에러 메시지에서 보이는 URL**: `https://s2s-backend.onrender.com/api` ❌
+**실제 Render URL**: `https://project-18-rls8.onrender.com` ✅
+
+#### 해결 방법:
 
 1. **Vercel 대시보드 접속**
    - https://vercel.com → 프로젝트 선택
 
 2. **Settings → Environment Variables**
 
-3. **새 변수 추가:**
+3. **기존 `VITE_API_BASE_URL` 확인:**
+   - 현재 값이 `https://s2s-backend.onrender.com/api`라면 수정 필요!
+
+4. **올바른 값으로 수정 또는 추가:**
    - **Key**: `VITE_API_BASE_URL`
-   - **Value**: `https://project-18-rls8.onrender.com/api`
+   - **Value**: `https://project-18-rls8.onrender.com/api` ⚠️ **반드시 이 URL로!**
    - **Environment**: Production, Preview, Development 모두 선택 ✅
 
-4. **Save 클릭**
+5. **Save 클릭**
 
-5. **재배포 필수!**
+6. **재배포 필수!** (가장 중요!)
    - Deployments 탭 → 최신 배포의 "..." → **Redeploy**
-   - 또는 GitHub에 push하면 자동 재배포
+   - 환경 변수는 빌드 시점에 포함되므로 재배포 없이는 적용되지 않음!
 
 ### 3단계: 확인
 
