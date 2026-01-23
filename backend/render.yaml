@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: s2s-backend
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: EMAIL_USER
+        value: nivuss128@gmail.com
+      - key: EMAIL_PASS
+        value: hkoo mlsd mhmw vswx

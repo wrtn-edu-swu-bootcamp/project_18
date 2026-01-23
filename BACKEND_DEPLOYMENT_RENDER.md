@@ -18,11 +18,13 @@ Render는 Railway보다 더 간단하고 무료 플랜이 좋습니다!
    - **Name**: `s2s-backend` (원하는 이름)
    - **Region**: `Singapore` (가장 가까운 지역)
    - **Branch**: `main`
-   - **Root Directory**: `backend` ✅ (중요!)
+   - **Root Directory**: `backend` ✅ **매우 중요! 반드시 `backend`로 설정**
    - **Runtime**: `Node`
    - **Build Command**: `npm install`
    - **Start Command**: `node server.js`
    - **Plan**: `Free` 선택
+
+⚠️ **Root Directory를 `backend`로 설정하지 않으면 404 에러 발생!**
 
 ### 3단계: 환경 변수 설정
 
@@ -83,28 +85,85 @@ Render는 Railway보다 더 간단하고 무료 플랜이 좋습니다!
 
 ## ⚠️ 문제 해결
 
-### "This Url doesn't exist" 에러
+### 브라우저에서 404 에러 발생 시
 
-1. **Render Logs 확인:**
-   - Render 대시보드 → 서비스 → **Logs** 탭
-   - 서버가 정상적으로 시작되었는지 확인
-   - 에러 메시지가 있다면 확인
+#### 1단계: Render Logs 확인 (가장 중요!)
 
-2. **다른 경로 시도:**
-   - `/` (루트 경로)
-   - `/health` (헬스 체크)
-   - `/api/stores` (실제 API 엔드포인트)
+1. Render 대시보드 → 서비스 → **Logs** 탭
+2. 확인할 내용:
+   - `🚀 S2S Backend server running on http://localhost:XXXX` 메시지가 있는지
+   - 에러 메시지가 있는지
+   - 빌드가 성공했는지
 
-3. **서버 재시작:**
-   - Render 대시보드 → **Manual Deploy** → **Clear build cache & deploy**
+**예상되는 정상 로그:**
+```
+🚀 S2S Backend server running on http://localhost:10000
+📧 이메일 서비스 설정 중...
+✅ 이메일 서비스 연결 성공!
+✨ Server is ready!
+```
 
-4. **환경 변수 확인:**
-   - Settings → Environment Variables
-   - `EMAIL_USER`, `EMAIL_PASS`가 올바르게 설정되었는지 확인
+**문제가 있다면:**
+- `Error: Cannot find module` → 의존성 문제
+- `EADDRINUSE` → 포트 문제
+- `ENOENT` → 파일 경로 문제
 
-5. **Root Directory 확인:**
-   - Settings → Build & Deploy
-   - **Root Directory**가 `backend`로 설정되어 있는지 확인
+#### 2단계: Root Directory 확인 (404의 주요 원인!)
+
+1. Render 대시보드 → 서비스 → **Settings** → **Build & Deploy**
+2. **Root Directory** 확인:
+   - ✅ 올바른 값: `backend`
+   - ❌ 잘못된 값: `.` 또는 비어있음
+
+3. **Root Directory가 잘못되었다면:**
+   - `backend`로 변경
+   - **Save Changes**
+   - **Manual Deploy** → **Clear build cache & deploy**
+
+#### 3단계: 서버 재배포
+
+1. Render 대시보드 → 서비스
+2. **Manual Deploy** → **Clear build cache & deploy** 선택
+3. 배포 완료 대기 (2-3분)
+4. Logs에서 서버 시작 메시지 확인
+
+#### 4단계: 직접 테스트
+
+배포 완료 후 브라우저에서 테스트:
+
+1. **루트 경로:**
+   - `https://your-app.onrender.com/`
+   - 예상 응답: `{"status":"OK","message":"S2S Backend is running",...}`
+
+2. **헬스 체크:**
+   - `https://your-app.onrender.com/health`
+   - 예상 응답: `{"status":"OK","message":"S2S Backend is running"}`
+
+3. **API 엔드포인트:**
+   - `https://your-app.onrender.com/api/stores`
+   - 예상 응답: JSON 배열
+
+#### 5단계: 환경 변수 확인
+
+1. Settings → Environment Variables
+2. 다음 변수들이 있는지 확인:
+   - `EMAIL_USER` = `nivuss128@gmail.com`
+   - `EMAIL_PASS` = `hkoo mlsd mhmw vswx`
+
+#### 6단계: package.json 확인
+
+Render가 `backend/package.json`을 찾을 수 있는지 확인:
+- Root Directory가 `backend`면 자동으로 찾음
+- `backend/package.json`이 존재하는지 확인
+
+### 🔍 디버깅 체크리스트
+
+- [ ] Root Directory가 `backend`로 설정됨
+- [ ] Logs에 `🚀 S2S Backend server running` 메시지 있음
+- [ ] Logs에 에러 메시지 없음
+- [ ] 환경 변수 `EMAIL_USER`, `EMAIL_PASS` 설정됨
+- [ ] `https://your-app.onrender.com/` 접속 시 JSON 응답
+- [ ] `https://your-app.onrender.com/api/stores` 접속 시 JSON 배열 응답
 
 ## ⚠️ Render 무료 플랜 제한
 
