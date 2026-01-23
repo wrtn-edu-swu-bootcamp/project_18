@@ -58,7 +58,16 @@ export default function Home() {
       setStores(data);
     } catch (error) {
       console.error('매장 불러오기 실패:', error);
-      alert(`⚠️ 백엔드 서버에 연결할 수 없습니다.\n\n에러: ${error.message}\n\nVercel 환경 변수에 VITE_API_BASE_URL이 설정되어 있는지 확인해주세요.`);
+      console.error('현재 API URL:', import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api (기본값)');
+      console.error('환경 변수 확인:', {
+        VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
+        MODE: import.meta.env.MODE,
+        PROD: import.meta.env.PROD
+      });
+      
+      // 더 친화적인 에러 메시지
+      const errorMsg = error.message || '알 수 없는 오류';
+      alert(`⚠️ 백엔드 서버 연결 실패\n\n${errorMsg}\n\n브라우저 콘솔(F12)에서 자세한 정보를 확인할 수 있습니다.`);
     }
   }
 

@@ -1,9 +1,24 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+// 환경 변수 확인 및 기본값 설정
+const getApiBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  const isProduction = import.meta.env.MODE === 'production' || window.location.hostname !== 'localhost';
+  
+  if (!envUrl && isProduction) {
+    console.error('⚠️ VITE_API_BASE_URL 환경 변수가 설정되지 않았습니다!');
+    console.error('Vercel Settings → Environment Variables에서 VITE_API_BASE_URL을 설정해주세요.');
+  }
+  
+  return envUrl || 'http://localhost:3001/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 // API 호출 헬퍼 함수
 async function apiFetch(url, options = {}) {
+  const fullUrl = `${API_BASE_URL}${url}`;
+  
   try {
-    const response = await fetch(`${API_BASE_URL}${url}`, {
+    const response = await fetch(fullUrl, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
@@ -22,8 +37,17 @@ async function apiFetch(url, options = {}) {
     return response.json();
   } catch (error) {
     // 네트워크 에러 처리
-    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-      throw new Error(`백엔드 서버에 연결할 수 없습니다. API URL: ${API_BASE_URL}`);
+    if (error.message.includes('Failed to fetch') || 
+        error.message.includes('NetworkError') ||
+        error.message.includes('Load failed') ||
+        error.name === 'TypeError') {
+      
+      const isProduction = window.location.hostname !== 'localhost';
+      const errorMessage = isProduction
+        ? `백엔드 서버에 연결할 수 없습니다.\n\n현재 API URL: ${API_BASE_URL}\n\n해결 방법:\n1. Vercel Settings → Environment Variables에서 VITE_API_BASE_URL 확인\n2. 백엔드 서버가 배포되어 실행 중인지 확인\n3. 백엔드 CORS 설정이 프론트엔드 도메인을 허용하는지 확인`
+        : `백엔드 서버에 연결할 수 없습니다.\n\n현재 API URL: ${API_BASE_URL}\n\n로컬 개발 시:\n1. 백엔드 서버가 http://localhost:3001에서 실행 중인지 확인\n2. npm run dev로 백엔드 서버 시작`;
+      
+      throw new Error(errorMessage);
     }
     throw error;
   }
