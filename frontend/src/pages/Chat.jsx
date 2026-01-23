@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getStores } from '../utils/api';
 
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 const CATEGORIES = [
   { id: 'OUTERWEAR', label: 'OUTERWEAR', emoji: '🧥' },
