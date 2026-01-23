@@ -65,9 +65,46 @@ Render는 Railway보다 더 간단하고 무료 플랜이 좋습니다!
 
 ## 🔍 배포 확인
 
-1. Render 대시보드에서 **Logs** 탭 확인
-2. 브라우저에서 `https://your-app.onrender.com/api/health` 접속
-3. `{"status":"OK","message":"S2S Backend is running"}` 응답 확인
+1. **Render 대시보드에서 Logs 확인**
+   - 서비스 → **Logs** 탭
+   - `🚀 S2S Backend server running` 메시지 확인
+   - 에러가 있다면 확인
+
+2. **다양한 경로로 테스트:**
+   - `https://your-app.onrender.com/` (루트)
+   - `https://your-app.onrender.com/health` (헬스 체크)
+   - `https://your-app.onrender.com/api/health` (API 헬스 체크)
+   - `https://your-app.onrender.com/api/stores` (매장 목록)
+
+3. **예상 응답:**
+   ```json
+   {"status":"OK","message":"S2S Backend is running"}
+   ```
+
+## ⚠️ 문제 해결
+
+### "This Url doesn't exist" 에러
+
+1. **Render Logs 확인:**
+   - Render 대시보드 → 서비스 → **Logs** 탭
+   - 서버가 정상적으로 시작되었는지 확인
+   - 에러 메시지가 있다면 확인
+
+2. **다른 경로 시도:**
+   - `/` (루트 경로)
+   - `/health` (헬스 체크)
+   - `/api/stores` (실제 API 엔드포인트)
+
+3. **서버 재시작:**
+   - Render 대시보드 → **Manual Deploy** → **Clear build cache & deploy**
+
+4. **환경 변수 확인:**
+   - Settings → Environment Variables
+   - `EMAIL_USER`, `EMAIL_PASS`가 올바르게 설정되었는지 확인
+
+5. **Root Directory 확인:**
+   - Settings → Build & Deploy
+   - **Root Directory**가 `backend`로 설정되어 있는지 확인
 
 ## ⚠️ Render 무료 플랜 제한
 

@@ -553,9 +553,26 @@ app.delete('/api/repairs/:id', async (req, res) => {
   }
 });
 
-// 헬스 체크
+// 헬스 체크 (여러 경로 지원)
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'S2S Backend is running' });
+});
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'OK', message: 'S2S Backend is running' });
+});
+
+// 루트 경로
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    message: 'S2S Backend is running',
+    endpoints: {
+      health: '/api/health or /health',
+      stores: '/api/stores',
+      requests: '/api/requests'
+    }
+  });
 });
 
 app.listen(PORT, async () => {
