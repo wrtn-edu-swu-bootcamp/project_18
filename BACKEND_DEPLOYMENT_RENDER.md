@@ -55,15 +55,34 @@ Render는 Railway보다 더 간단하고 무료 플랜이 좋습니다!
 2. 배포 진행 상황 확인 (약 2-3분 소요)
 3. 배포 완료 후 **URL 확인** (예: `https://s2s-backend.onrender.com`)
 
-### 5단계: Vercel 환경 변수 설정
+### 5단계: 백엔드 URL 확인 및 테스트
+
+서버가 정상적으로 실행되었다면:
+
+1. **백엔드 URL 확인:**
+   - Render 로그에서 `Available at your primary URL` 확인
+   - 예: `https://project-18-rls8.onrender.com`
+
+2. **브라우저에서 직접 테스트:**
+   - `https://project-18-rls8.onrender.com/` (루트)
+   - `https://project-18-rls8.onrender.com/api/stores` (API)
+   - JSON 응답이 오는지 확인
+
+3. **404가 나온다면:**
+   - 서버가 아직 완전히 시작되지 않았을 수 있음 (30초 대기)
+   - 또는 경로 문제일 수 있음
+
+### 6단계: Vercel 환경 변수 설정
+
+백엔드가 정상 작동하는 것을 확인한 후:
 
 1. Vercel 대시보드 접속
 2. 프로젝트 → **Settings** → **Environment Variables**
 3. 추가:
    - **Key**: `VITE_API_BASE_URL`
-   - **Value**: `https://s2s-backend.onrender.com/api`
+   - **Value**: `https://project-18-rls8.onrender.com/api` (Render URL + `/api`)
    - **Environment**: Production, Preview, Development 모두 선택
-4. **Save** 후 재배포
+4. **Save** 후 재배포 필수!
 
 ## 🔍 배포 확인
 
