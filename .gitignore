@@ -31,5 +31,4 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
-# Data files (keep structure, ignore content changes)
-backend/data/requests.json
+# Data files - 주의: JSON 데이터 파일들은 초기 데이터를 포함해야 함

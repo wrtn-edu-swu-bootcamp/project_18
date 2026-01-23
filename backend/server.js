@@ -20,10 +20,25 @@ const STORES_FILE = path.join(__dirname, 'data', 'stores.json');
 const REQUESTS_FILE = path.join(__dirname, 'data', 'requests.json');
 const REPAIRS_FILE = path.join(__dirname, 'data', 'repairs.json');
 
-// 데이터 읽기 헬퍼 함수
+// 데이터 읽기 헬퍼 함수 (파일이 없으면 기본값으로 생성)
 async function readJSON(filePath) {
-  const data = await fs.readFile(filePath, 'utf-8');
-  return JSON.parse(data);
+  try {
+    const data = await fs.readFile(filePath, 'utf-8');
+    return JSON.parse(data);
+  } catch (error) {
+    // 파일이 없으면 기본 구조로 생성
+    if (error.code === 'ENOENT') {
+      console.log(`📁 파일이 없어서 생성합니다: ${filePath}`);
+      const defaultData = filePath.includes('stores') 
+        ? { stores: [] } 
+        : filePath.includes('requests') 
+          ? { requests: [] } 
+          : { repairs: [] };
+      await writeJSON(filePath, defaultData);
+      return defaultData;
+    }
+    throw error;
+  }
 }
 
 // 데이터 쓰기 헬퍼 함수
