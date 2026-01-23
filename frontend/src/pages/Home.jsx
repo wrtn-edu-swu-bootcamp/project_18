@@ -67,7 +67,17 @@ export default function Home() {
       
       // 더 친화적인 에러 메시지
       const errorMsg = error.message || '알 수 없는 오류';
-      alert(`⚠️ 백엔드 서버 연결 실패\n\n${errorMsg}\n\n브라우저 콘솔(F12)에서 자세한 정보를 확인할 수 있습니다.`);
+      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api (기본값)';
+      const isProduction = window.location.hostname !== 'localhost';
+      
+      let helpMessage = '';
+      if (isProduction && !import.meta.env.VITE_API_BASE_URL) {
+        helpMessage = '\n\n❌ Vercel 환경 변수가 설정되지 않았습니다!\n\n해결 방법:\n1. Vercel → Settings → Environment Variables\n2. Key: VITE_API_BASE_URL\n3. Value: https://your-backend.onrender.com/api\n4. 재배포 필수!';
+      } else if (errorMsg.includes('404')) {
+        helpMessage = '\n\n❌ 404 에러: API 경로를 찾을 수 없습니다.\n\n확인 사항:\n1. Render 백엔드가 정상 작동 중인지 확인\n2. 환경 변수 값이 올바른지 확인 (끝에 /api 포함)\n3. 환경 변수 저장 후 재배포했는지 확인';
+      }
+      
+      alert(`⚠️ 백엔드 서버 연결 실패\n\n에러: ${errorMsg}\n현재 API URL: ${apiUrl}${helpMessage}\n\n브라우저 콘솔(F12)에서 자세한 정보를 확인할 수 있습니다.`);
     }
   }
 
