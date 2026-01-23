@@ -1,0 +1,12 @@
+{
+  "name": "s2s-inventory-management",
+  "version": "1.0.0",
+  "description": "S2S Store to Store Inventory Management System",
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build",
+    "dev": "cd frontend && npm run dev"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
